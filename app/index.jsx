@@ -1,0 +1,77 @@
+import { View,ActivityIndicator,StyleSheet } from 'react-native';
+import { Redirect } from 'expo-router';
+import { useState,useEffect } from 'react';
+import { useAuth } from '@clerk/clerk-expo'
+import { collection, getDocs } from 'firebase/firestore'
+import {DB} from '../firebaseConfig'
+import colors from '../constants/Colors'
+
+const index = () => {
+
+    const { isSignedIn,userId } = useAuth()
+    const [userType,setUserType] = useState('')
+    const [fetchingUserType, setFetchingUserType] = useState(true)
+
+  // Fetch the user type from Firestore
+  useEffect(() => {
+    const fetchUserType = async () => {
+      if (isSignedIn) {
+        try {
+          const userInfoCollectionRef = collection(DB, `users/${userId}/info`)
+          const userInfoSnapshot = await getDocs(userInfoCollectionRef)
+
+          if (!userInfoSnapshot.empty) {
+            const userData = userInfoSnapshot.docs[0].data()
+            setUserType(userData.compte_owner_type)
+          } else {
+            console.log('i cant find the user type in index page')
+          }
+        } catch (error) {
+          console.error('Error fetching user data:', error)
+        } finally {
+          setFetchingUserType(false) // Set loading state to false
+        }
+      } else {
+        setFetchingUserType(false)
+      }
+    }
+
+    fetchUserType()
+  }, [])
+
+
+  // Loading or fetching user type state
+    if (fetchingUserType) {
+      return (
+        <View style={styles.spinner_error_container}>
+          <ActivityIndicator size="large" color={colors.PRIMARY}/>
+        </View>
+      )
+    }
+
+    if(!isSignedIn) {
+      return <Redirect href={'/(auth)/welcome'}/>
+    }
+
+    if(isSignedIn && userType === 'parent') {
+      return <Redirect href={'/(main)/(parent)/(tabs)/home'}/>
+    }
+
+    if(isSignedIn && userType === 'student') {
+      return <Redirect href={'/(main)/(student)/(tabs)/home'}/>
+    }
+
+    if(isSignedIn && userType === 'driver') {
+      return <Redirect href={'/(main)/(driver)/(tabs)/home'}/>
+    }
+}
+
+const styles = StyleSheet.create({
+  spinner_error_container: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  }
+})
+
+export default index
