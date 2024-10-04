@@ -22,6 +22,7 @@ export default function Page() {
   const [isVerifyingCode, setIsVerifyingCode] = useState(false)
   const [userType,setUserType] = useState('')
   const [loadingUserType, setLoadingUserType] = useState(false)
+  const [timer, setTimer] = useState(60)
 
   const createAlert = (alerMessage) => {
     Alert.alert(alerMessage)
@@ -126,6 +127,25 @@ export default function Page() {
     }
   }
 
+  useEffect(() => {
+    let timerInterval;
+    if (verifying) {
+      timerInterval = setInterval(() => {
+        setTimer((prevTimer) => {
+          if (prevTimer <= 1) {
+            clearInterval(timerInterval);
+            setVerifying(false);
+            createAlert('رمز التاكيد لم يصل. الرجاء المحاولة مرة أخرى.');
+            return 60;
+          }
+          return prevTimer - 1;
+        });
+      }, 1000);
+    }
+    return () => clearInterval(timerInterval);
+  }, [verifying]);
+
+
   if (loadingUserType) {
     return (
       <View style={styles.spinner_error_container}>
@@ -167,6 +187,17 @@ export default function Page() {
             disabledStatus={!code || isVerifyingCode}
             loading={isVerifyingCode}
           />
+          <View style={styles.timer_container}>
+            <View style={styles.timer_box}>
+              <Text style={styles.timer_text}>رمز التاكيد سيصل الى</Text>
+              <Text style={styles.timer_dynamic}>{phone}</Text>
+            </View>
+            <View style={styles.timer_box}>
+              <Text style={styles.timer_text}>خلال</Text>
+              <Text style={styles.timer_dynamic}>{timer}</Text>
+              <Text style={styles.timer_text}>ثانية</Text>
+            </View>
+          </View>
         </>
         
       ) : (
@@ -187,7 +218,6 @@ export default function Page() {
             <Text style={styles.link_text}>ليس لديك حساب؟ سجل الآن</Text>
           </Link>
         </>
-        
       )}
       </View>
     </SafeAreaView>
@@ -237,5 +267,30 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  timer_container:{
+    justifyContent:'center',
+    alignItems:'center',
+    marginTop:20,
+  },
+  timer_box:{
+    flexDirection:'row-reverse',
+    justifyContent:'center',
+    alignItems:'center',
+    marginVertical:5
+  },
+  timer_text:{
+    color:'#295F98',
+    height:25,
+    fontFamily:'Cairo_400Regular',
+    fontSize:13,
+    marginHorizontal:5
+  },
+  timer_dynamic:{
+    color:'#295F98',
+    height:25,
+    fontFamily:'Cairo_700Bold',
+    fontSize:13,
+    marginHorizontal:5,
   }
 })

@@ -1,12 +1,11 @@
-import { Alert, StyleSheet, Text, View,Keyboard,ActivityIndicator } from 'react-native'
+import { Alert, StyleSheet, Text, View,Keyboard,ActivityIndicator,TextInput } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import React,{useEffect, useState} from 'react'
 import { useRouter } from 'expo-router'
 import colors from '../../../../constants/Colors'
 import CustomeButton from '../../../../components/CustomeButton'
-import CustomeInput from '../../../../components/CustomeInput'
 import {DB} from '../../../../firebaseConfig'
-import { addDoc , collection, getDocs, onSnapshot } from 'firebase/firestore'
+import { addDoc , collection } from 'firebase/firestore'
 import * as Location from 'expo-location'
 import haversine from 'haversine'
 import { useUser } from '@clerk/clerk-expo'
@@ -150,12 +149,17 @@ const calculateDistance = () => {
         student_phone_number:userData.phone_number,
         student_age:studentAge,
         student_sex:studentSex,
-        student_car_type:carType,
         student_home_location:location,
         student_school:studentSchool,
         student_school_location:schoolLocation,
         distance_to_school: distance,
-        driver_id:null
+        student_car_type:carType,
+        driver_id:null,
+        picked_up:false,
+        dropped_off:false,
+        student_trip_status:'at home',
+        tomorrow_trip_canceled:false,
+        called_by_driver:false,
       }
 
       const docRef = await addDoc(studentsCollectionRef,studentData)
@@ -213,72 +217,75 @@ const calculateDistance = () => {
     <SafeAreaView style={styles.container}>
       <Text style={styles.title}>اضافة بيانات</Text>
         <View style={styles.form}>
-            <CustomeInput 
-              placeholder={'العمر'}
-              value={studentAge}
-              onChangeText={(text) => setStudentAge(text)}
-              keyboardType='numeric'
+          <View style={styles.age_sex_input_container}>
+            <TextInput 
+            style={styles.age_input}
+            placeholder={'العمر'}
+            value={studentAge}
+            onChangeText={(text) => setStudentAge(text)}
+            keyboardType='numeric'
             />
             <Dropdown
-              style={styles.dropdown}
-              placeholderStyle={styles.dropdownStyle}
-              selectedTextStyle={styles.dropdownStyle}
-              data={sex}
-              labelField="name"
-              valueField="name"
-              placeholder= 'الجنس'
-              value={studentSex}
-              onChange={item => {
-              handleStudentSex(item.name)
-              }}
-              />
-            <Dropdown
-              style={styles.dropdown}
-              placeholderStyle={styles.dropdownStyle}
-              selectedTextStyle={styles.dropdownStyle}
-              data={cars}
-              labelField="name"
-              valueField="name"
-              placeholder= 'نوع السيارة'
-              value={carType}
-              onChange={item => {
-                handleCarChange(item.name)
-              }}
+            style={styles.sex_dropdown}
+            placeholderStyle={styles.dropdownStyle}
+            selectedTextStyle={styles.dropdownStyle}
+            data={sex}
+            labelField="name"
+            valueField="name"
+            placeholder= 'الجنس'
+            value={studentSex}
+            onChange={item => {
+            handleStudentSex(item.name)
+            }}
             />
-            <Dropdown
-                style={styles.dropdown}
-                placeholderStyle={styles.dropdownStyle}
-                selectedTextStyle={styles.dropdownStyle}
-                data={schools}
-                labelField="name"
-                valueField="name"
-                placeholder= 'اختر المدرسة'
-                value={studentSchool}
-                onChange={item => {
-                handleSchoolChange(item.name)
-                }}
-            />
-            <CustomeButton
-                title={location ? 'تم تحديد موقعك' : 'عنوان المنزل'}
-                icon={true}
-                iconType={location ? 'done' : 'location'}
-                onPressHandler={getLocation}
-                disabledStatus={location}
-            />
-            <View style={styles.location_msg_view}>
-                {location && schoolLocation ? (
-                    <>
-                        <Text style={styles.location_warning_text}>المسافة بين منزل الطالب و المدرسة: {distance} كلم</Text>
-                    </>
-                ) : (
-                    <Text style={styles.location_warning_text}>بالنقر على "عنوان المنزل" التطبيق يسجل موقعك الحالي كعنوان للمنزل لذا يرجى التواجد في المنزل عند التسجيل</Text>
-                )}
-            </View>
-            <CustomeButton 
-              title={'أضف'}
-              onPressHandler={addNewStudentHandler}
-              disabledStatus={!location || !studentSchool || !studentAge || !studentSex || !carType}
-            />
+          </View>
+          <Dropdown
+            style={styles.dropdown}
+            placeholderStyle={styles.dropdownStyle}
+            selectedTextStyle={styles.dropdownStyle}
+            data={cars}
+            labelField="name"
+            valueField="name"
+            placeholder= 'نوع السيارة'
+            value={carType}
+            onChange={item => {
+              handleCarChange(item.name)
+            }}
+          />
+          <Dropdown
+            style={styles.dropdown}
+            placeholderStyle={styles.dropdownStyle}
+            selectedTextStyle={styles.dropdownStyle}
+            data={schools}
+            labelField="name"
+            valueField="name"
+            placeholder= 'المدرسة'
+            value={studentSchool}
+            onChange={item => {
+            handleSchoolChange(item.name)
+            }}
+          />
+          <CustomeButton
+            title={location ? 'تم تحديد موقعك' : 'عنوان المنزل'}
+            icon={true}
+            iconType={location ? 'done' : 'location'}
+            onPressHandler={getLocation}
+            disabledStatus={location}
+          />
+          <View style={styles.location_msg_view}>
+            {location && schoolLocation ? (
+              <>
+                <Text style={styles.location_warning_text}>المسافة بين منزل الطالب و المدرسة: {distance} كلم</Text>
+              </>
+            ) : (
+                <Text style={styles.location_warning_text}>بالنقر على "عنوان المنزل" التطبيق يسجل موقعك الحالي كعنوان للمنزل لذا يرجى التواجد في المنزل عند التسجيل</Text>
+            )}
+          </View>
+          <CustomeButton 
+            title={'أضف'}
+            onPressHandler={addNewStudentHandler}
+            disabledStatus={!location || !studentSchool || !studentAge || !studentSex || !carType}
+          />
           <Text style={styles.location_warning_text}>* يرجى التأكد من ادخال جميع البيانات</Text>
           <CustomeButton 
             title={'الغاء'}
@@ -299,12 +306,12 @@ const styles = StyleSheet.create({
     backgroundColor:colors.WHITE
   },
   title:{
-    marginVertical:30,
+    height:70,
+    marginBottom:40,
     fontFamily:'Cairo_400Regular',
     fontSize:24,
   },
   form:{
-    marginTop:30,
     width:'100%',
     justifyContent:'space-between',
     alignItems:'center',
@@ -315,17 +322,41 @@ const styles = StyleSheet.create({
     borderWidth:1,
     marginBottom:10,
     borderColor:colors.PRIMARY,
-    borderRadius:20,
+    borderRadius:15,
   },
   dropdownStyle:{
     fontFamily:'Cairo_400Regular',
     textAlign:'center',
     fontSize:14
   },
+  age_sex_input_container:{
+    flexDirection:'row',
+    width:280,
+    alignItems:'center',
+    justifyContent:'space-between'
+  },
+  age_input:{
+    width:135,
+    height:50,
+    marginBottom:10,
+    borderWidth:1,
+    borderColor:colors.PRIMARY,
+    borderRadius:15,
+    textAlign:'center',
+    fontFamily:'Cairo_400Regular'
+  },
+  sex_dropdown:{
+    width:135,
+    height:50,
+    borderWidth:1,
+    marginBottom:10,
+    borderColor:colors.PRIMARY,
+    borderRadius:15,
+  },
   location_msg_view:{
     width:280,
     paddingHorizontal:10,
-    marginBottom:40,
+    marginBottom:20,
   },
   location_warning_text:{
     fontFamily:'Cairo_700Bold',

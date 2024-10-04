@@ -1,5 +1,5 @@
 import React, { createContext, useState, useEffect, useContext } from 'react';
-import { collection, onSnapshot,getDocs,getDoc,doc,query, where } from 'firebase/firestore';
+import { collection, onSnapshot, getDocs, query, where } from 'firebase/firestore';
 import {DB} from '../../firebaseConfig'
 import { useUser } from '@clerk/clerk-expo';
 
@@ -12,7 +12,6 @@ export const StudentProvider = ({ children }) => {
   const [allStudents,setAllStudents] = useState([])
   const [students, setStudents] = useState([])
   const [assignedToDriver, setAssignedToDriver] = useState([{}])
-  const [driver, setDriver] = useState(null)
   const [userData, setUserData] = useState(null)
   const [fetchingAllStudentsLoading,setFetchingAllStudentsLoading] = useState(true)
   const [fetchingUserDataLoading, setFetchingUserDataLoading] = useState(true)

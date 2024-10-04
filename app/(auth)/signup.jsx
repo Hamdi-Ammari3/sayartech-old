@@ -1,4 +1,4 @@
-import React,{useState} from 'react'
+import React,{useState,useEffect} from 'react'
 import { Text, View,StyleSheet,Image, Alert } from 'react-native'
 import { SafeAreaView } from "react-native-safe-area-context"
 import { useSignUp } from '@clerk/clerk-expo'
@@ -23,6 +23,7 @@ export default function SignUpScreen() {
   const [code, setCode] = useState('')
   const [isSigningUp, setIsSigningUp] = useState(false)
   const [isVerifying, setIsVerifying] = useState(false)
+  const [timer, setTimer] = useState(60)
 
   const compte_owner = [
     {label:'ولي أمر',value:'parent'},
@@ -121,6 +122,24 @@ export default function SignUpScreen() {
     }
   };
 
+  useEffect(() => {
+    let timerInterval;
+    if (verifying) {
+      timerInterval = setInterval(() => {
+        setTimer((prevTimer) => {
+          if (prevTimer <= 1) {
+            clearInterval(timerInterval);
+            setVerifying(false);
+            createAlert('رمز التاكيد لم يصل. الرجاء المحاولة مرة أخرى.');
+            return 60;
+          }
+          return prevTimer - 1;
+        });
+      }, 1000);
+    }
+    return () => clearInterval(timerInterval);
+  }, [verifying]);
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.logo}>
@@ -177,6 +196,17 @@ export default function SignUpScreen() {
             disabledStatus={!code || isVerifying}
             loading={isVerifying}
            />
+          <View style={styles.timer_container}>
+            <View style={styles.timer_box}>
+              <Text style={styles.timer_text}>رمز التاكيد سيصل الى</Text>
+              <Text style={styles.timer_dynamic}>{phone}</Text>
+            </View>
+            <View style={styles.timer_box}>
+              <Text style={styles.timer_text}>خلال</Text>
+              <Text style={styles.timer_dynamic}>{timer}</Text>
+              <Text style={styles.timer_text}>ثانية</Text>
+            </View>
+          </View>  
         </>
       )}
       </View>
@@ -226,5 +256,30 @@ const styles = StyleSheet.create({
     fontFamily:'Cairo_700Bold',
     fontSize:13,
     color:'#295F98'
+  },
+  timer_container:{
+    justifyContent:'center',
+    alignItems:'center',
+    marginTop:20,
+  },
+  timer_box:{
+    flexDirection:'row-reverse',
+    justifyContent:'center',
+    alignItems:'center',
+    marginVertical:5
+  },
+  timer_text:{
+    color:'#295F98',
+    height:25,
+    fontFamily:'Cairo_400Regular',
+    fontSize:13,
+    marginHorizontal:5
+  },
+  timer_dynamic:{
+    color:'#295F98',
+    height:25,
+    fontFamily:'Cairo_700Bold',
+    fontSize:13,
+    marginHorizontal:5,
   }
 })

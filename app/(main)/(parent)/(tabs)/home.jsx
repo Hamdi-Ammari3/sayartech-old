@@ -1,9 +1,7 @@
 import { StyleSheet, Text, View, ActivityIndicator,Image,ScrollView,TouchableOpacity } from 'react-native'
 import { useUser } from '@clerk/clerk-expo'
-import { useState,useEffect,useRef } from 'react'
+import { useState } from 'react'
 import { Link } from 'expo-router'
-import * as Notifications from 'expo-notifications';
-import * as Device from 'expo-device';
 import { useStudentData } from '../../../stateManagment/StudentState'
 import colors from '../../../../constants/Colors'
 import logo from '../../../../assets/images/logo.jpeg'
@@ -12,10 +10,6 @@ import StudentHomePage from '../../../../components/StudentHomePage'
 const home = () => {
   const { isLoaded } = useUser()
   const [selectedStudent,setSelectedStudent] = useState(0)
-  const [expoPushToken, setExpoPushToken] = useState('');
-  const [notification, setNotification] = useState(false);
-  const notificationListener = useRef();
-  const responseListener = useRef();
   const {students,fetchingStudentsLoading,fetchingAssignedToDriversLoading} = useStudentData()
 
   // Wait untill data load

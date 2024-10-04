@@ -1,8 +1,10 @@
 import React,{useState,useEffect} from 'react'
-import { StyleSheet, Text, View, ActivityIndicator } from 'react-native'
+import { StyleSheet, Text, View, TextInput,ActivityIndicator,TouchableOpacity } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import MapView, { Marker, Polyline, PROVIDER_DEFAULT } from 'react-native-maps'
 import axios from 'axios'
+import { doc,updateDoc } from 'firebase/firestore'
+import { DB } from '../firebaseConfig'
 import { useStudentData } from '../app/stateManagment/StudentState'
 import colors from '../constants/Colors'
 
@@ -11,13 +13,22 @@ const StudentHomePage = ({student,selectedStudent}) => {
   const [driverLocation, setDriverLocation] = useState(null)
   const [routeCoordinates, setRouteCoordinates] = useState([])
   const [loadingRoutes,setLoadingRoutes] = useState(false)
+  const [isCanceling, setIsCanceling] = useState(false);
+  const [cancelText, setCancelText] = useState('');
  
   const {fetchingStudentsLoading,assignedToDriver,fetchingAssignedToDriversLoading} = useStudentData()
 
   const GOOGLE_MAPS_APIKEY = 'AIzaSyA-3LcUn0UzzVovibA1YZIL29n1c0GIi9M'
 
   useEffect(() => {
-    if(!student?.driver_id || !student?.picked_up || fetchingAssignedToDriversLoading || fetchingStudentsLoading || student?.student_trip_status === 'at home' ||  student?.student_trip_status === 'at school') {
+    if(
+      !student?.driver_id || 
+      !student?.picked_up || 
+      fetchingAssignedToDriversLoading || 
+      fetchingStudentsLoading || 
+      student?.student_trip_status === 'at home' || 
+      student?.student_trip_status === 'at school'
+    ) {
       return;
     }
 
@@ -49,7 +60,15 @@ const StudentHomePage = ({student,selectedStudent}) => {
       }
     }
     trackDriver();
-  }, [assignedToDriver[student.driver_id]?.current_location,assignedToDriver[student.driver_id]?.first_trip_status,selectedStudent]);
+  }, [
+      student?.driver_id,
+      student?.picked_up,
+      fetchingAssignedToDriversLoading,
+      fetchingStudentsLoading,
+      student?.student_trip_status,
+      assignedToDriver,
+      selectedStudent
+]);
 
   // Function to get route between driver and student
   const fetchRoute = async (startingPoint, nextDestinationCoords) => {
@@ -104,6 +123,31 @@ const StudentHomePage = ({student,selectedStudent}) => {
     return points;
   };
 
+  // Function to handle canceling the trip
+  const handleCancelTrip = async () => {
+    if (cancelText.trim() === 'نعم') {
+      try {
+        const studentDoc = doc(DB, 'students', student.id);
+        await updateDoc(studentDoc, {
+          tomorrow_trip_canceled: true,
+        });
+        alert('تم إلغاء رحلة الغد بنجاح');
+        setIsCanceling(false);
+        setCancelText('');
+      } catch (error) {
+        console.log('Error canceling trip:', error);
+        alert('حدث خطأ أثناء إلغاء الرحلة. حاول مرة أخرى.');
+      }
+    } else {
+      alert('لتاكيد الالغاء يرجى كتابة نعم');
+    }
+  };
+
+  const handleDenyCancelTrip = () => {
+    setIsCanceling(false);
+    setCancelText('');
+  }
+
 // Wait untill data load
 if (loadingRoutes) {
   return (
@@ -133,6 +177,31 @@ if(student.driver_id && student.student_trip_status === 'at home') {
         <View style={styles.student_box}>
           <Text style={styles.student_text}>الطالب في المنزل 😴</Text>
         </View>
+        {!student.tomorrow_trip_canceled && (
+          <View>
+          <TouchableOpacity style={styles.cancel_trip_btn} onPress={() => setIsCanceling(true)}>
+            <Text style={styles.cancel_trip_btn_text}>الغاء رحلة الغد</Text>
+          </TouchableOpacity>
+          {isCanceling && (
+            <View style={styles.cancel_trip_confirmation}>
+              <TextInput
+                style={styles.cancel_trip_input}
+                value={cancelText}
+                onChangeText={setCancelText}
+                placeholder="للتاكيد اكتب كلمة نعم هنا"
+              />
+              <View style={styles.confirm_deny_canceling_btn}>
+                <TouchableOpacity style={styles.confirm_cancel_btn} onPress={handleCancelTrip}>
+                  <Text style={styles.confirm_cancel_btn_text}>تأكيد</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.deny_cancel_btn} onPress={handleDenyCancelTrip}>
+                 <Text style={styles.deny_cancel_btn_text}>رفض</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
+        </View>
+        )}
       </View>
     </SafeAreaView>
   )
@@ -251,6 +320,62 @@ const styles = StyleSheet.create({
     fontFamily: 'Cairo_400Regular',
     fontSize:15,
     color:colors.WHITE,
+  },
+  cancel_trip_btn:{
+    backgroundColor:'#FF4C51',
+    width:250,
+    padding:10,
+    borderRadius:15,
+    marginTop:10
+  },
+  cancel_trip_btn_text:{
+    textAlign:'center',
+    fontFamily: 'Cairo_400Regular',
+    fontSize:15,
+    color:colors.WHITE,
+  },
+  cancel_trip_input:{
+    width:250,
+    padding:10,
+    borderRadius:15,
+    borderColor:'#ddd',
+    borderWidth:1,
+    marginTop:10,
+    textAlign:'center',
+    fontFamily: 'Cairo_400Regular',
+    fontSize:13,
+  },
+  confirm_deny_canceling_btn:{
+    flexDirection:'row-reverse',
+    alignItems:'center',
+    justifyContent:'space-around',
+  },
+  confirm_cancel_btn:{
+    backgroundColor:'#16B1FF',
+    width:100,
+    padding:10,
+    borderRadius:15,
+    marginTop:10
+  },
+  deny_cancel_btn:{
+    borderWidth:1,
+    borderColor:'#16B1FF',
+    width:100,
+    padding:10,
+    borderRadius:15,
+    marginTop:10
+  },
+  confirm_cancel_btn_text:{
+    textAlign:'center',
+    fontFamily: 'Cairo_400Regular',
+    fontSize:15,
+    color:colors.WHITE
+  },
+  deny_cancel_btn_text:{
+    textAlign:'center',
+    fontFamily: 'Cairo_400Regular',
+    fontSize:15,
+    color:'#16B1FF'
   },
   student_name_container:{
     backgroundColor:'#16B1FF',

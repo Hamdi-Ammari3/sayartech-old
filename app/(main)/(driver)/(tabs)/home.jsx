@@ -3,11 +3,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useUser } from '@clerk/clerk-expo';
 import { useState,useEffect } from 'react';
 import MapView, { Marker, Polyline, PROVIDER_DEFAULT } from 'react-native-maps'
+import call from 'react-native-phone-call'
 import haversine from 'haversine'
 import axios from 'axios'
 import { doc,updateDoc } from 'firebase/firestore'
-import { DB } from '../../../../firebaseConfig';
-import { Link } from 'expo-router';
+import { DB } from '../../../../firebaseConfig'
+import { Link } from 'expo-router'
 import colors from '../../../../constants/Colors'
 import { useDriverData } from '../../../stateManagment/DriverContext'
 
@@ -25,6 +26,9 @@ const Home = () => {
   const [currentTrip, setCurrentTrip] = useState('first')
   const [fetchingNextLocationLoading,setFetchingNextLocationLoading] = useState(false)
   const [fetchingDriverCurrentLocationLoading,setFetchingDriverCurrentLocationLoading] = useState(true)
+  const [isMarkingStudent, setIsMarkingStudent] = useState(false);
+
+  console.log(driverData[0])
 
 // Fetch the driver curent location before start calculating
   useEffect(() => {
@@ -75,7 +79,7 @@ useEffect(() => {
       if (currentTrip === 'first') {  
         startingPoint = driverData[0].current_location || driverData[0]?.driver_home_location?.coords
 
-        sorted = assignedStudents
+        sorted = assignedStudents.filter(student => student.tomorrow_trip_canceled === false)
           .map((student) => ({
             ...student,
             distance: calculateDistance(startingPoint, student?.student_home_location?.coords),
@@ -202,22 +206,43 @@ const getCoordinates = (location) => {
       })
   
     } catch (error) {
-      console.log('Error starting the trip:', error)
+      //console.log('Error starting the trip:', error)
+      alert('حدث خطأ اثناء بدء الرحلة') 
     }
   }
 
-  // Click the button to finish the first trip
+// Click the button to finish the first trip
   const handleFirstTripFinish = async () => {
-    // Save the trip start time and status to the database
+    // Save the trip end time and status to the database
     try {
       const driverDoc = doc(DB,'drivers', driverData[0].id)
+      const pickedUpStudents = assignedStudents.filter(student => student.picked_up);
+      
+      if (pickedUpStudents.length === 0) {
+        await updateDoc(driverDoc, { 
+          first_trip_status: 'not started', 
+          second_trip_status:'finished',
+        })
+        for (const student of assignedStudents) {
+          const studentDoc = doc(DB, 'students', student.id);
+          await updateDoc(studentDoc, {
+            student_trip_status: 'at home',
+          });
+        }
+
+        // Reset state variables
+        setCurrentTrip('first');
+        setCurrentStudentIndex(0);
+        setDisplayFinalStation(false);
+        setSortedStudents([]);
+        return;
+      }
+
       await updateDoc(driverDoc, { 
         first_trip_status: 'finished', 
         first_trip_end: new Date(),
        })
 
-      // Filter students who are marked as picked_up: true
-      const pickedUpStudents = assignedStudents.filter(student => student.picked_up);
       // Update student statuses
       for (const student of pickedUpStudents) {
         const studentDoc = doc(DB, 'students', student.id);
@@ -226,7 +251,6 @@ const getCoordinates = (location) => {
         });
       }
 
-
       // Reset state variables
       setCurrentTrip('second');
       setCurrentStudentIndex(0);
@@ -234,13 +258,15 @@ const getCoordinates = (location) => {
       setSortedStudents([]);
 
     } catch (error) {
-      console.log('Error finishing the trip:', error)
+      //console.log('Error finishing the trip:', error)
+      alert('حدث خطأ اثناء انهاء الرحلة')
     }
   }
 
 // Click the button to start the second trip
 const handlesecondTripStart = async () => {
   try {
+    
     const driverDoc = doc(DB, 'drivers', driverData[0].id);
     await updateDoc(driverDoc, { 
       second_trip_status: 'started', 
@@ -257,12 +283,11 @@ const handlesecondTripStart = async () => {
       });
     }
 
-    // Fetch students and sort for the second trip
   } catch (error) {
-    console.log('Error starting the second trip:', error);
+    //console.log('Error starting the second trip:', error);
+    alert('حدث خطأ اثناء بدء الرحلة')
   }
 };
-
 
 // Click the button to start the second trip
 const handlesecondTripFinish = async () => {
@@ -274,6 +299,15 @@ const handlesecondTripFinish = async () => {
       second_trip_end: new Date()
     })
 
+    for (const student of assignedStudents) {
+      const studentDoc = doc(DB, 'students', student.id);
+      await updateDoc(studentDoc, {
+        tomorrow_trip_canceled: false,
+        picked_up: false,
+        dropped_off: false,
+        called_by_driver: false,
+      });
+    }
     // Reset state variables
     setCurrentTrip('first');
     setCurrentStudentIndex(0);
@@ -281,12 +315,62 @@ const handlesecondTripFinish = async () => {
     setSortedStudents([]);
     
   } catch (error) {
-    console.log('Error starting the trip:', error)
+    //console.log('Error starting the trip:', error)
+    alert('حدث خطأ اثناء انهاء الرحلة')
   }
 }
 
+const triggerPhoneCall = (phoneNumber) => {
+  const args = {
+    number: phoneNumber, // Student's phone number
+    prompt: true, // Ask the user before making the call
+  };
+
+  call(args).catch(console.error);
+};
+
+useEffect(() => {
+  const checkProximityAndCall = async () => {
+    if (sortedStudents.length === 0 || !driverLocation) {
+      return;
+    }
+
+    const currentStudent = sortedStudents[currentStudentIndex];
+    const studentCoords = currentStudent.student_home_location?.coords;
+
+    if (studentCoords) {
+      const distanceToStudent = calculateDistance(driverLocation, studentCoords);
+
+      // Trigger a call if the driver is within 500 meters of the student's home
+      if (
+        driverData[0].first_trip_status === 'started',
+        distanceToStudent <= 500 && 
+        currentStudent.called_by_driver === false &&
+        currentStudent.student_trip_status === 'at home' &&
+        !currentStudent.tomorrow_trip_canceled &&
+        currentStudent.picked_up === false &&
+        currentStudent.id !== 'school' &&
+        currentStudent.id !== 'driver_home'
+        ) 
+      {
+        triggerPhoneCall(currentStudent.student_phone_number);
+        const studentDoc = doc(DB, 'students', currentStudent.id);
+        const updateField = {called_by_driver: true};
+        await updateDoc(studentDoc, updateField);
+      }
+    }
+  };
+
+  const intervalId = setInterval(checkProximityAndCall, 5000); // Check every 5 seconds
+
+  return () => clearInterval(intervalId); // Clear the interval on component unmount
+}, [driverLocation, sortedStudents, currentStudentIndex]);
+
+
 // move to the next student location
 const markStudent = async (status) => {
+  if (isMarkingStudent) return; // Prevent double-click
+  setIsMarkingStudent(true); // Set loading state to true
   const currentStudent = sortedStudents[currentStudentIndex];
 
   if (currentStudent) {
@@ -314,7 +398,10 @@ const markStudent = async (status) => {
         }
       }
     } catch (error) {
-      console.log('Error updating student status:', error);
+      //console.log('Error updating student status:', error);
+      alert('حدث خطأ اثناء تحديث حالة الطالب')
+    }finally{
+      setIsMarkingStudent(false);
     }
   }
 };
@@ -443,10 +530,16 @@ if(driverData[0].first_trip_status === "started" && driverData[0].second_trip_st
             </View>
             <View style={styles.map_picked_button_container}>
               <View style={styles.map_picked_button_container2}>
-                <TouchableOpacity style={styles.pick_button_accepted} onPress={() => markStudent(true)} disabled={fetchingNextLocationLoading}>
+                <TouchableOpacity
+                  style={styles.pick_button_accepted} 
+                  onPress={() => markStudent(true)} 
+                  disabled={isMarkingStudent}>
                   <Text style={styles.pick_button_text}>صعد</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.pick_button_denied} onPress={() => markStudent(false)}>
+                <TouchableOpacity 
+                  style={styles.pick_button_denied} 
+                  onPress={() => markStudent(false)} 
+                  disabled={isMarkingStudent}>
                   <Text style={styles.pick_button_text}>لم يصعد</Text>
                 </TouchableOpacity>
               </View>
@@ -460,11 +553,16 @@ if(driverData[0].first_trip_status === "started" && driverData[0].second_trip_st
             <View style={styles.map_picked_button_container}>
               <View style={styles.done_trip_button_container}>
                 <TouchableOpacity style={styles.done_trip_button} onPress={() => handleFirstTripFinish()}>
-                  <Text style={styles.pick_button_text}>تاكيد وصول الطلاب الى المدرسة</Text>
+                  {assignedStudents.filter(student => student.picked_up).length > 0 ? (
+                    <Text style={styles.pick_button_text}>تاكيد وصول الطلاب الى المدرسة</Text>
+                  ) : (
+                    <Text style={styles.pick_button_text}>الغاء الرحلة</Text>
+                  )}
+                  
                 </TouchableOpacity>
               </View>
             </View>
-          </>
+          </>  
         )}
       </>
 
@@ -523,7 +621,10 @@ if(driverData[0].second_trip_status === "started" && driverData[0].first_trip_st
              </View>
             <View style={styles.map_picked_button_container}>
               <View style={styles.map_picked_button_container2}>
-                <TouchableOpacity style={styles.pick_button_accepted} onPress={() => markStudent(true)}>
+                <TouchableOpacity 
+                  style={styles.pick_button_accepted} 
+                  onPress={() => markStudent(true)} 
+                  disabled={isMarkingStudent}>
                   <Text style={styles.pick_button_text}>نزل</Text>
                 </TouchableOpacity>
               </View>

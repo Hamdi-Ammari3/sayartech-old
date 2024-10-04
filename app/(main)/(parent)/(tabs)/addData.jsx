@@ -162,8 +162,10 @@ const calculateDistance = () => {
         student_car_type:carType,
         driver_id:null,
         picked_up:false,
-        dropped_off:true,
-        student_trip_status:'at home'
+        dropped_off:false,
+        student_trip_status:'at home',
+        tomorrow_trip_canceled:false,
+        called_by_driver:false,
       }
 
       const docRef = await addDoc(studentsCollectionRef,studentData)
