@@ -12,7 +12,7 @@ const profile = () => {
 
   const [error, setError] = useState('')
 
-  const {userData,fetchingUserDataLoading,students,fetchingStudentsLoading,assignedToDriver,fetchingAssignedToDriversLoading} = useStudentData()
+  const {userData,fetchingUserDataLoading,students,fetchingStudentsLoading,driver,fetchingdriverLoading} = useStudentData()
 
 
   const { signOut } = useAuth()
@@ -28,11 +28,13 @@ const profile = () => {
   };
 
 //Loading 
-  if (fetchingStudentsLoading || fetchingUserDataLoading) {
+  if (fetchingStudentsLoading || fetchingUserDataLoading || fetchingdriverLoading) {
     return (
-      <View style={styles.spinner_error_container}>
-        <ActivityIndicator size="large" color={colors.PRIMARY}/>
-      </View>
+      <SafeAreaView style={styles.container}>
+        <View style={styles.spinner_error_container}>
+          <ActivityIndicator size="large" color={colors.PRIMARY}/>
+        </View>
+      </SafeAreaView>
     );
   }
 
@@ -50,7 +52,7 @@ const profile = () => {
       </View>
         <FlatList
         data={students}
-        renderItem={({item}) => <StudentCard item={item} drivers={assignedToDriver} fetchingDriversLoading={fetchingAssignedToDriversLoading}/>}
+        renderItem={({item}) => <StudentCard item={item} drivers={driver} fetchingDriversLoading={fetchingdriverLoading}/>}
         keyExtractor={item => item.id}
         contentContainerStyle={styles.flatList_style}
         ListEmptyComponent={() => (
@@ -69,7 +71,7 @@ export default profile
 
 const styles = StyleSheet.create({
   container:{
-    height:'100%',
+    flex:1,
     alignItems:'center',
     backgroundColor: colors.WHITE,
   },  

@@ -9,7 +9,7 @@ import driverImage from '../../../../assets/images/driver.png'
 
 const profile = () => {
   const {userData,fetchingUserDataLoading,students,fetchingStudentsLoading,assignedToDriver,fetchingAssignedToDriversLoading} = useStudentData()
-console.log(assignedToDriver[students[0].driver_id])
+
   const createAlert = (alerMessage) => {
     Alert.alert(alerMessage)
   }
@@ -29,9 +29,11 @@ console.log(assignedToDriver[students[0].driver_id])
 //Loading user data
   if (fetchingStudentsLoading || fetchingUserDataLoading || fetchingAssignedToDriversLoading) {
     return (
-      <View style={styles.spinner_error_container}>
-        <ActivityIndicator size="large" color={colors.PRIMARY}/>
-      </View>
+      <SafeAreaView style={styles.container}>
+        <View style={styles.spinner_error_container}>
+          <ActivityIndicator size="large" color={colors.PRIMARY}/>
+        </View>
+      </SafeAreaView>
     );
   }
 

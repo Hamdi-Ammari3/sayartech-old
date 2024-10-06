@@ -1,4 +1,5 @@
 import { StyleSheet, Text, View, ActivityIndicator,Image,ScrollView,TouchableOpacity } from 'react-native'
+import { SafeAreaView } from 'react-native-safe-area-context'
 import { useUser } from '@clerk/clerk-expo'
 import { useState } from 'react'
 import { Link } from 'expo-router'
@@ -10,36 +11,40 @@ import StudentHomePage from '../../../../components/StudentHomePage'
 const home = () => {
   const { isLoaded } = useUser()
   const [selectedStudent,setSelectedStudent] = useState(0)
-  const {students,fetchingStudentsLoading,fetchingAssignedToDriversLoading} = useStudentData()
+  const {students,fetchingStudentsLoading,fetchingdriverLoading} = useStudentData()
 
   // Wait untill data load
-  if (fetchingStudentsLoading || fetchingAssignedToDriversLoading || !isLoaded) {
+  if (fetchingStudentsLoading || fetchingdriverLoading || !isLoaded) {
     return (
-      <View style={styles.spinner_error_container}>
-        <ActivityIndicator size="large" color={colors.PRIMARY} />
-      </View>
+      <SafeAreaView style={styles.container}>
+        <View style={styles.spinner_error_container}>
+          <ActivityIndicator size="large" color={colors.PRIMARY} />
+        </View>
+      </SafeAreaView>
     );
   }
 
   // if the user have no registered students yet
   if(!students.length) {
     return(
-      <View style={styles.no_registered_students_container}>
-       <View style={styles.logo}>
-          <Image source={logo} style={styles.logo_image}/>
+      <SafeAreaView style={styles.container}>
+        <View style={styles.no_registered_students_container}>
+          <View style={styles.logo}>
+            <Image source={logo} style={styles.logo_image}/>
+          </View>
+          <View style={styles.no_registered_students}>
+          <Text style={styles.no_student_text}>ليس لديك طلاب مسجلين بالتطبيق</Text>
+            <Link href="/addData" style={styles.link_container}>
+              <Text style={styles.link_text}>اضف الآن</Text>
+            </Link>
+          </View>
         </View>
-        <View style={styles.no_registered_students}>
-         <Text style={styles.no_student_text}>ليس لديك طلاب مسجلين بالتطبيق</Text>
-          <Link href="/addData" style={styles.link_container}>
-            <Text style={styles.link_text}>اضف الآن</Text>
-          </Link>
-        </View>
-      </View>
+      </SafeAreaView>
     )
   }
 
   return(
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <View style={styles.scrollViewContainer}>
         <ScrollView 
           horizontal 
@@ -68,7 +73,7 @@ const home = () => {
            <StudentHomePage student={students[selectedStudent]} selectedStudent={selectedStudent}/>
          )}
         </View>
-   </View>
+   </SafeAreaView>
   )}
 
 export default home;
@@ -76,10 +81,11 @@ export default home;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: colors.WHITE,
   },
   no_registered_students_container:{
     height:400,
-    paddingTop:25,
+    paddingTop:30,
     alignItems:'center',
     justifyContent:'space-between',
   },
@@ -113,22 +119,25 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   scrollViewContainer:{
-    height:50,
+    height:60,
+    width:'100%',
     position:'absolute',
     top:30,
     left:0,
-    zIndex:100
+    zIndex:100,
+    alignItems:'center',
+    justifyContent:'center',
   },
   student_name_buttons_container:{
     flexDirection:'row',
     alignItems:'center',
-    justifyContent:'space-around',
+    justifyContent:'center',
   },
   student_name_button:{
     backgroundColor:colors.WHITE,
     borderColor:'#ddd',
     borderWidth:1,
-    width:150,
+    minWidth:150,
     padding:10,
     borderRadius:15,
     alignItems:'center',
@@ -141,8 +150,8 @@ const styles = StyleSheet.create({
     fontSize:13,
   },
   active_student_name_button:{
-    backgroundColor:'#16B1FF',
-    borderColor:'#16B1FF'
+    backgroundColor:colors.PRIMARY,
+    borderColor:colors.PRIMARY,
   },
   active_student_name_button_text:{
     color:colors.WHITE,

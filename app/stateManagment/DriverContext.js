@@ -61,8 +61,9 @@ useEffect(() => {
     const fetchUserData = async () => {
       if (user) {
         try {
-          const userInfoCollectionRef = collection(DB, `users/${user.id}/info`);
-          const userInfoSnapshot = await getDocs(userInfoCollectionRef);
+          const userInfoCollectionRef = collection(DB, 'users')
+          const q = query(userInfoCollectionRef , where('user_id', '==', user.id))
+          const userInfoSnapshot = await getDocs(q)
 
           if (!userInfoSnapshot.empty) {
             const userData = userInfoSnapshot.docs[0].data();

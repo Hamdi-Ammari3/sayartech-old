@@ -9,6 +9,7 @@ import {DB} from '../../../../firebaseConfig'
 import { addDoc , collection } from 'firebase/firestore'
 import * as Location from 'expo-location'
 import haversine from 'haversine'
+import DateTimePicker from '@react-native-community/datetimepicker'
 import { useUser } from '@clerk/clerk-expo'
 import { Dropdown } from 'react-native-element-dropdown'
 import { useStudentData } from '../../../stateManagment/StudentState'
@@ -28,6 +29,9 @@ const addData = () => {
   const [carType,setCarType] = useState('')
   const [loading,setLoading] = useState(false)
   const [addingNewStudentLoading,setAddingNewStudentLoading] = useState(false)
+  const [studentBirthDate,setStudentBirthDate] = useState(new Date())
+  const [dateSelected, setDateSelected] = useState(false);
+  const [showPicker,setShowPicker] = useState(false);
 
   const {userData} = useStudentData()
 
@@ -132,6 +136,21 @@ const calculateDistance = () => {
     }
   }, [schoolLocation, location])
 
+//Get the driver birth date
+const showDatePicker = () => {
+  setShowPicker(true);
+};
+
+// Handle the Date Change
+ const handleDateChange = (event, selectedDate) => {
+  if (event.type === "set") {
+    const currentDate = selectedDate || studentBirthDate;
+    setStudentBirthDate(currentDate);
+    setDateSelected(true);
+  }
+  setShowPicker(false);
+};
+
 //Adding new student
   const addNewStudentHandler = async () => {
     if (!user) {
@@ -151,9 +170,10 @@ const calculateDistance = () => {
       const studentsCollectionRef = collection(DB,'students')
       const studentData = {
         student_full_name: studentFullName,
+        student_parent_full_name:userData.user_full_name,
         student_user_id:userData.user_id,
         student_phone_number:userData.phone_number,
-        student_age:studentAge,
+        student_birth_date:studentBirthDate,
         student_sex:studentSex,
         student_home_location:location,
         student_school:studentSchool,
@@ -163,9 +183,11 @@ const calculateDistance = () => {
         driver_id:null,
         picked_up:false,
         dropped_off:false,
-        student_trip_status:'at home',
-        tomorrow_trip_canceled:false,
         called_by_driver:false,
+        picked_from_school:false,
+        checked_in_front_of_school:false,
+        tomorrow_trip_canceled:false,
+        student_trip_status:'at home', 
       }
 
       const docRef = await addDoc(studentsCollectionRef,studentData)
@@ -174,7 +196,7 @@ const calculateDistance = () => {
       
       // Clear the form fields
       setStudentFullName('')
-      setStudentAge('')
+      setDateSelected(false)
       setStudentSex('')
       setLocation(null)
       setStudentSchool('')
@@ -194,7 +216,7 @@ const calculateDistance = () => {
   // Clear the form fields
   const clearFormHandler = () => {
     setStudentFullName('')
-    setStudentAge('')
+    setDateSelected(false)
     setStudentSex('')
     setLocation(null)
     setStudentSchool('')
@@ -205,9 +227,11 @@ const calculateDistance = () => {
 
   if (addingNewStudentLoading) {
     return (
-      <View style={styles.spinner_error_container}>
-        <ActivityIndicator size="large" color={colors.PRIMARY}/>
-      </View>
+      <SafeAreaView style={styles.container}>
+        <View style={styles.spinner_error_container}>
+          <ActivityIndicator size="large" color={colors.PRIMARY}/>
+        </View>
+      </SafeAreaView>
     )
   }
 
@@ -215,80 +239,84 @@ const calculateDistance = () => {
     <SafeAreaView style={styles.container}>
       <Text style={styles.title}>اضافة طالب</Text>
         <View style={styles.form}>
-            <CustomeInput 
-              placeholder={'الاسم الكامل'}
-              value={studentFullName}
-              onChangeText={(text) => setStudentFullName(text)}
+          <CustomeInput 
+            placeholder={'الاسم الكامل'}
+            value={studentFullName}
+            onChangeText={(text) => setStudentFullName(text)}
+          />
+          <CustomeButton
+            title={dateSelected ? studentBirthDate.toLocaleDateString() : 'تاريخ الميلاد'}
+            onPressHandler={showDatePicker} 
+          />
+          {showPicker && (
+            <DateTimePicker
+              value={studentBirthDate}
+              mode="date"
+              display="default"
+              onChange={handleDateChange}
+              maximumDate={new Date()}
             />
-            <View style={styles.age_sex_input_container}>
-              <TextInput 
-              style={styles.age_input}
-              placeholder={'العمر'}
-              value={studentAge}
-              onChangeText={(text) => setStudentAge(text)}
-              keyboardType='numeric'
-              />
-              <Dropdown
-              style={styles.sex_dropdown}
-              placeholderStyle={styles.dropdownStyle}
-              selectedTextStyle={styles.dropdownStyle}
-              data={sex}
-              labelField="name"
-              valueField="name"
-              placeholder= 'الجنس'
-              value={studentSex}
-              onChange={item => {
-              handleStudentSex(item.name)
-              }}
-              />
-            </View>
-            <Dropdown
-              style={styles.dropdown}
-              placeholderStyle={styles.dropdownStyle}
-              selectedTextStyle={styles.dropdownStyle}
-              data={cars}
-              labelField="name"
-              valueField="name"
-              placeholder= 'نوع السيارة'
-              value={carType}
-              onChange={item => {
-                handleCarChange(item.name)
-              }}
-            />
-            <Dropdown
-              style={styles.dropdown}
-              placeholderStyle={styles.dropdownStyle}
-              selectedTextStyle={styles.dropdownStyle}
-              data={schools}
-              labelField="name"
-              valueField="name"
-              placeholder= 'المدرسة'
-              value={studentSchool}
-              onChange={item => {
-              handleSchoolChange(item.name)
-              }}
-            />
-            <CustomeButton
-              title={location ? 'تم تحديد موقعك' : 'عنوان المنزل'}
-              icon={true}
-              iconType={location ? 'done' : 'location'}
-              onPressHandler={getLocation}
-              disabledStatus={location}
-            />
-            <View style={styles.location_msg_view}>
-                {location && schoolLocation ? (
-                    <>
-                        <Text style={styles.location_warning_text}>المسافة بين منزل الطالب و المدرسة: {distance} كلم</Text>
-                    </>
-                ) : (
-                    <Text style={styles.location_warning_text}>بالنقر على "عنوان المنزل" التطبيق يسجل موقعك الحالي كعنوان للمنزل لذا يرجى التواجد في المنزل عند التسجيل</Text>
-                )}
-            </View>
-            <CustomeButton 
-              title={'أضف'}
-              onPressHandler={addNewStudentHandler}
-              disabledStatus={!studentFullName || !location || !studentSchool || !studentAge || !studentSex || !carType}
-            />
+          )}
+          <Dropdown
+            style={styles.dropdown}
+            placeholderStyle={styles.dropdownStyle}
+            selectedTextStyle={styles.dropdownStyle}
+            data={sex}
+            labelField="name"
+            valueField="name"
+            placeholder= 'الجنس'
+            value={studentSex}
+            onChange={item => {
+            handleStudentSex(item.name)
+            }}
+          />
+          <Dropdown
+            style={styles.dropdown}
+            placeholderStyle={styles.dropdownStyle}
+            selectedTextStyle={styles.dropdownStyle}
+            data={cars}
+            labelField="name"
+            valueField="name"
+            placeholder= 'نوع السيارة'
+            value={carType}
+            onChange={item => {
+              handleCarChange(item.name)
+            }}
+          />
+          <Dropdown
+            style={styles.dropdown}
+            placeholderStyle={styles.dropdownStyle}
+            selectedTextStyle={styles.dropdownStyle}
+            data={schools}
+            labelField="name"
+            valueField="name"
+            placeholder= 'المدرسة'
+            value={studentSchool}
+            onChange={item => {
+            handleSchoolChange(item.name)
+             }}
+          />
+          <CustomeButton
+            title={location ? 'تم تحديد موقعك' : 'عنوان المنزل'}
+            icon={true}
+            iconType={location ? 'done' : 'location'}
+            onPressHandler={getLocation}
+            disabledStatus={location}
+          />
+          <View style={styles.location_msg_view}>
+            {location && schoolLocation ? (
+              <>
+                <Text style={styles.location_warning_text}>المسافة بين منزل الطالب و المدرسة: {distance} كلم</Text>
+              </>
+            ) : (
+              <Text style={styles.location_warning_text}>بالنقر على "عنوان المنزل" التطبيق يسجل موقعك الحالي كعنوان للمنزل لذا يرجى التواجد في المنزل عند التسجيل</Text>
+            )}
+          </View>
+          <CustomeButton 
+            title={'أضف'}
+            onPressHandler={addNewStudentHandler}
+             disabledStatus={!studentFullName || !location || !studentSchool || !studentBirthDate || !studentSex || !carType}
+          />
           <Text style={styles.location_warning_text}>* يرجى التأكد من ادخال جميع البيانات</Text>
           <CustomeButton 
             title={'الغاء'}
@@ -303,14 +331,13 @@ export default addData
 
 const styles = StyleSheet.create({
   container:{
-    height:'100%',
+    flex:1,
     alignItems:'center',
-    paddingVertical:40,
+    paddingVertical:20,
     backgroundColor:colors.WHITE
   },
   title:{
-    height:60,
-    marginBottom:40,
+    marginVertical:20,
     fontFamily:'Cairo_400Regular',
     fontSize:24,
   },

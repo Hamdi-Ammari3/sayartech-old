@@ -2,7 +2,7 @@ import { useSignIn,useAuth } from '@clerk/clerk-expo'
 import { Link,Redirect } from 'expo-router'
 import { Text, View,SafeAreaView,StyleSheet, Image, Alert,ActivityIndicator } from 'react-native'
 import React,{useState,useEffect} from 'react'
-import { collection,getDocs } from 'firebase/firestore'
+import { collection,getDocs,where,query } from 'firebase/firestore'
 import { DB } from '../../firebaseConfig'
 import colors from '../../constants/Colors'
 import CustomeInput from '../../components/CustomeInput'
@@ -41,9 +41,10 @@ export default function Page() {
       if (userId) {
         setLoadingUserType(true)
         try {
-          const userInfoCollectionRef = collection(DB, `users/${userId}/info`)
-          const userInfoSnapshot = await getDocs(userInfoCollectionRef)
-
+          const userInfoCollectionRef = collection(DB, 'users')
+          const q = query(userInfoCollectionRef , where('user_id', '==', userId))
+          const userInfoSnapshot = await getDocs(q)
+          
           if (!userInfoSnapshot.empty) {
             const userData = userInfoSnapshot.docs[0].data()
             setUserType(userData.compte_owner_type)

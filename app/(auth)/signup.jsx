@@ -18,6 +18,7 @@ export default function SignUpScreen() {
 
   const [compteOwner,setCompteOwner] = useState('')
   const [userName,setUserName] = useState('')
+  const [userFamilyName,setUserFamilyName] = useState('')
   const [verifying, setVerifying] = useState(false)
   const [phone, setPhone] = useState('')
   const [code, setCode] = useState('')
@@ -68,10 +69,11 @@ export default function SignUpScreen() {
   // Save user data to Firestore
   const saveUserDataToFirestore = async (userId) => {
     try {
-      const userInfoCollectionRef = collection(DB,`users/${userId}/info`)
+      const userInfoCollectionRef = collection(DB,'users')
       const userData = {
         user_id: userId,
         user_full_name: userName,
+        user_family_name: userFamilyName,
         compte_owner_type:compteOwner,
         phone_number:`+216${phone}`,
       }
@@ -167,6 +169,11 @@ export default function SignUpScreen() {
             onChangeText={(text) => setUserName(text)}
           />
           <CustomeInput
+            value={userFamilyName}
+            placeholder="اللقب"
+            onChangeText={(text) => setUserFamilyName(text)}
+          />
+          <CustomeInput
             value={phone}
             placeholder="رقم الهاتف"
             keyboardType='numeric'
@@ -175,7 +182,7 @@ export default function SignUpScreen() {
           <CustomeButton 
             title="تسجيل" 
             onPressHandler={onSignUpPress} 
-            disabledStatus={!userName || !phone || isSigningUp}
+            disabledStatus={!userName || !phone || !userFamilyName || isSigningUp}
             loading={isSigningUp}
           />
           <Link href={'/login'}>

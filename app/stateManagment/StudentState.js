@@ -11,12 +11,12 @@ export const StudentProvider = ({ children }) => {
   const { user,isLoaded } = useUser()
   const [allStudents,setAllStudents] = useState([])
   const [students, setStudents] = useState([])
-  const [assignedToDriver, setAssignedToDriver] = useState([{}])
+  const [driver, setDriver] = useState([{}])
   const [userData, setUserData] = useState(null)
   const [fetchingAllStudentsLoading,setFetchingAllStudentsLoading] = useState(true)
   const [fetchingUserDataLoading, setFetchingUserDataLoading] = useState(true)
   const [fetchingStudentsLoading,setFetchingStudentsLoading] = useState(true)
-  const [fetchingAssignedToDriversLoading, setFetchingAssignedToDriversLoading] = useState(true)
+  const [fetchingdriverLoading, setFetchingdriverLoading] = useState(true)
   const [error, setError] = useState(null)
 
   //Fetching All students
@@ -56,7 +56,6 @@ export const StudentProvider = ({ children }) => {
             ...doc.data(),
           }))
           .filter((student) => student.student_user_id === user.id);
-
         setStudents(studentList);
         setFetchingStudentsLoading(false);
 
@@ -82,8 +81,8 @@ export const StudentProvider = ({ children }) => {
             }
           })
         );
-        setAssignedToDriver(driverData);
-        setFetchingAssignedToDriversLoading(false);
+        setDriver(driverData);
+        setFetchingdriverLoading(false);
       },
       (error) => {
         setError('Failed to load students. Please try again.');
@@ -100,8 +99,9 @@ useEffect(() => {
     const fetchUserData = async () => {
       if (user) {
         try {
-          const userInfoCollectionRef = collection(DB, `users/${user.id}/info`);
-          const userInfoSnapshot = await getDocs(userInfoCollectionRef);
+          const userInfoCollectionRef = collection(DB, 'users')
+          const q = query(userInfoCollectionRef , where('user_id', '==', user.id))
+          const userInfoSnapshot = await getDocs(q);
 
           if (!userInfoSnapshot.empty) {
             const userData = userInfoSnapshot.docs[0].data();
@@ -132,8 +132,8 @@ useEffect(() => {
         students,
         fetchingStudentsLoading,
 
-        assignedToDriver,
-        fetchingAssignedToDriversLoading,
+        driver,
+        fetchingdriverLoading,
 
         error 
       }}>

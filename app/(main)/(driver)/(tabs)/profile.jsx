@@ -25,9 +25,11 @@ const profile = () => {
   // Loading or fetching user type state
   if (fetchingUserDataLoading) {
     return (
-      <View style={styles.spinner_error_container}>
-        <ActivityIndicator size="large" color={colors.PRIMARY}/>
-      </View>
+      <SafeAreaView style={styles.container}>
+        <View style={styles.spinner_error_container}>
+          <ActivityIndicator size="large" color={colors.PRIMARY}/>
+        </View>
+      </SafeAreaView>
     )
   }
 
@@ -39,8 +41,8 @@ const profile = () => {
           <Text style={styles.user_info_text}>{userData.phone_number}</Text>
         </View>
         <TouchableOpacity style={styles.button} onPress={handleSignOut}>
-            <Text style={styles.logout_text}>خروج</Text>
-            <SimpleLineIcons name="logout" size={24} color="white" />
+          <Text style={styles.logout_text}>خروج</Text>
+          <SimpleLineIcons name="logout" size={24} color="white" />
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -50,12 +52,12 @@ export default profile
 
 const styles = StyleSheet.create({
   container:{
-    height:'100%',
+    flex:1,
     alignItems:'center',
     backgroundColor: colors.WHITE,
   },  
   header:{
-    justifyContent:'space-around',
+    justifyContent:'center',
     alignItems:'center',
     paddingTop:20,
     marginVertical:30,
@@ -63,7 +65,7 @@ const styles = StyleSheet.create({
   },
   user_info:{
     width:340,
-    height:60,
+    height:50,
     flexDirection:'row-reverse',
     alignItems:'center',
     justifyContent:'space-around',
@@ -78,7 +80,7 @@ const styles = StyleSheet.create({
   },
   button:{
     width:120,
-    height:50,
+    height:45,
     backgroundColor:colors.PRIMARY,
     borderRadius:15,
     flexDirection:'row',

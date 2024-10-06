@@ -1,4 +1,4 @@
-import { Alert, StyleSheet, Text, View,Keyboard,ActivityIndicator } from 'react-native'
+import { Alert, StyleSheet, Text, View,Keyboard,ActivityIndicator,Image,Button } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import React,{useEffect, useState} from 'react'
 import { useRouter } from 'expo-router'
@@ -10,7 +10,9 @@ import { addDoc , collection} from 'firebase/firestore'
 import * as Location from 'expo-location'
 import { useUser } from '@clerk/clerk-expo'
 import { Dropdown } from 'react-native-element-dropdown'
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { useDriverData } from '../../../stateManagment/DriverContext'
+import miniVan from '../../../../assets/images/minivan.png'
 
 const addData = () => {
   const { user } = useUser()
@@ -22,6 +24,9 @@ const addData = () => {
   const [carPlate,setCarPlate] = useState('')
   const [carSeats,setCarSeats] = useState('')
   const [carModel,setCarModel] = useState('')
+  const [driverBirthDate,setDriverBirthDate] = useState(new Date())
+  const [dateSelected, setDateSelected] = useState(false);
+  const [showPicker,setShowPicker] = useState(false);
   const [addingDriverDataLoading,setAddingDriverDataLoading] = useState(false)
 
   const {userData,driverData,fetchingUserDataLoading,error} = useDriverData()
@@ -79,8 +84,23 @@ const addData = () => {
     }
   }
 
+//Get the driver birth date
+const showDatePicker = () => {
+  setShowPicker(true);
+};
+
+// Handle the Date Change
+ const handleDateChange = (event, selectedDate) => {
+  if (event.type === "set") {
+    const currentDate = selectedDate || driverBirthDate;
+    setDriverBirthDate(currentDate);
+    setDateSelected(true);
+  }
+  setShowPicker(false);
+};
+
 //Add New Driver
-const addNewDriverHandler = async () => {
+  const addNewDriverHandler = async () => {
   if (!user) {
     createAlert('المستخدم غير معرف')
     return
@@ -101,6 +121,7 @@ const addNewDriverHandler = async () => {
       driver_user_id:userData.user_id,
       driver_phone_number:userData.phone_number,
       driver_home_location:location,
+      driver_birth_date:driverBirthDate,
       driver_car_type:carType,
       driver_car_model:carModel,
       driver_car_plate:carPlate,
@@ -125,6 +146,7 @@ const addNewDriverHandler = async () => {
     setCarModel('')
     setCarPlate('')
     setCarSeats('')
+    setDateSelected(false)
 
   } catch (error) {
      createAlert('. يرجى المحاولة مرة أخرى')
@@ -135,39 +157,55 @@ const addNewDriverHandler = async () => {
   }
 }
 
-  // Clear the form fields
+// Clear the form fields
   const clearFormHandler = () => {
     setLocation(null)
     setCarType('')
     setCarModel('')
     setCarPlate('')
     setCarSeats('')
+    setDateSelected(false)
   }
 
 // Loading or fetching user data from DB
   if (fetchingUserDataLoading) {
     return (
-      <View style={styles.spinner_error_container}>
-        <ActivityIndicator size="large" color={colors.PRIMARY}/>
-      </View>
+      <SafeAreaView style={styles.container}>
+        <View style={styles.spinner_error_container}>
+          <ActivityIndicator size="large" color={colors.PRIMARY}/>
+        </View>
+      </SafeAreaView>
     )
   }
 
 // Loading till adding driver data
-if (addingDriverDataLoading) {
-  return (
-    <View style={styles.spinner_error_container}>
-      <ActivityIndicator size="large" color={colors.PRIMARY}/>
-    </View>
-  )
-}
+  if (addingDriverDataLoading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.spinner_error_container}>
+          <ActivityIndicator size="large" color={colors.PRIMARY}/>
+        </View>
+      </SafeAreaView>
+    )
+  }
 
 // Check whether the user add data or no
   if(driverData.length > 0 && addingDriverDataLoading === false) {
     return (
-      <View style={styles.spinner_error_container}>
-        <Text style={styles.already_added_style}>لقد تمت اضافة بياناتك</Text>
-      </View>
+      <SafeAreaView style={styles.container}>
+        <View style={styles.already_added_container}>
+          <View>
+            <Image source={miniVan} style={{width:150,height:150,resizeMode:'contain'}}/>
+          </View>
+          <View style={styles.car_info_box}>
+            <Text style={styles.car_info_text}>{driverData[0]?.driver_car_type}</Text> 
+            <Text style={{ color: '#858585' }}> | </Text>
+            <Text style={styles.car_info_text}>{driverData[0]?.driver_car_model}</Text>
+            <Text style={{ color: '#858585' }}> | </Text>
+             <Text style={styles.car_info_text}>{driverData[0]?.driver_car_plate}</Text>
+          </View>
+        </View>
+      </SafeAreaView>
     )
   }
 
@@ -175,6 +213,19 @@ if (addingDriverDataLoading) {
     <SafeAreaView style={styles.container}>
       <Text style={styles.title}>اضافة بيانات</Text>
         <View style={styles.form}>
+          <CustomeButton
+            title={dateSelected ? driverBirthDate.toLocaleDateString() : 'تاريخ الميلاد'}
+            onPressHandler={showDatePicker} 
+          />
+          {showPicker && (
+            <DateTimePicker
+              value={driverBirthDate}
+              mode="date"
+              display="default"
+              onChange={handleDateChange}
+              maximumDate={new Date()} // Optional: Prevent selecting future dates
+            />
+          )}
           <Dropdown
             style={styles.dropdown}
             placeholderStyle={styles.dropdownStyle}
@@ -227,13 +278,13 @@ export default addData
 
 const styles = StyleSheet.create({
   container:{
-    height:'100%',
+    flex:1,
     alignItems:'center',
-    paddingVertical:40,
+    paddingVertical:10,
     backgroundColor:colors.WHITE
   },
   title:{
-    marginVertical:30,
+    marginVertical:20,
     fontFamily:'Cairo_400Regular',
     fontSize:24,
   },
@@ -281,8 +332,27 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  already_added_style:{
-    fontFamily: 'Cairo_400Regular',
-    fontSize:16
+  already_added_container:{
+    flex:1,
+    justifyContent:'center',
+    alignItems:'center',
+    backgroundColor:colors.WHITE,
+    paddingVertical:30,
+    borderRadius:15,
+  },
+  car_info_box:{
+    width:300,
+    height:100,
+    backgroundColor:'#F6F8FA',
+    flexDirection:'row-reverse',
+    justifyContent:'space-around',
+    alignItems:'center',
+    borderRadius:15,
+    marginTop:10
+  },
+  car_info_text:{
+    fontFamily:'Cairo_400Regular',
+    fontSize:14,
+    color:'#858585'
   }
 })

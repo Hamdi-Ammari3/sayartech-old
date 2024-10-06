@@ -2,7 +2,7 @@ import { View,ActivityIndicator,StyleSheet } from 'react-native';
 import { Redirect } from 'expo-router';
 import { useState,useEffect } from 'react';
 import { useAuth } from '@clerk/clerk-expo'
-import { collection, getDocs } from 'firebase/firestore'
+import { collection, getDocs,query,where } from 'firebase/firestore'
 import {DB} from '../firebaseConfig'
 import colors from '../constants/Colors'
 
@@ -17,8 +17,9 @@ const index = () => {
     const fetchUserType = async () => {
       if (isSignedIn) {
         try {
-          const userInfoCollectionRef = collection(DB, `users/${userId}/info`)
-          const userInfoSnapshot = await getDocs(userInfoCollectionRef)
+          const userInfoCollectionRef = collection(DB, 'users')
+          const q = query(userInfoCollectionRef , where('user_id', '==', userId))
+          const userInfoSnapshot = await getDocs(q)
 
           if (!userInfoSnapshot.empty) {
             const userData = userInfoSnapshot.docs[0].data()

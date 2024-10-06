@@ -16,7 +16,7 @@ const StudentHomePage = ({student,selectedStudent}) => {
   const [isCanceling, setIsCanceling] = useState(false);
   const [cancelText, setCancelText] = useState('');
  
-  const {fetchingStudentsLoading,assignedToDriver,fetchingAssignedToDriversLoading} = useStudentData()
+  const {fetchingStudentsLoading,driver,fetchingdriverLoading} = useStudentData()
 
   const GOOGLE_MAPS_APIKEY = 'AIzaSyA-3LcUn0UzzVovibA1YZIL29n1c0GIi9M'
 
@@ -24,7 +24,7 @@ const StudentHomePage = ({student,selectedStudent}) => {
     if(
       !student?.driver_id || 
       !student?.picked_up || 
-      fetchingAssignedToDriversLoading || 
+      fetchingdriverLoading || 
       fetchingStudentsLoading || 
       student?.student_trip_status === 'at home' || 
       student?.student_trip_status === 'at school'
@@ -35,8 +35,8 @@ const StudentHomePage = ({student,selectedStudent}) => {
     const trackDriver = async () => {
       setLoadingRoutes(true)
       try {
-        if (assignedToDriver[student.driver_id].current_location) {
-          setDriverLocation(assignedToDriver[student.driver_id].current_location);
+        if (driver[student.driver_id]?.current_location) {
+          setDriverLocation(driver[student.driver_id]?.current_location);
   
           // Determine the destination based on the student's trip status
           let destinationCoords;
@@ -47,8 +47,8 @@ const StudentHomePage = ({student,selectedStudent}) => {
           }
   
           // Fetch route if there's a valid destination and driver location
-          if (destinationCoords && assignedToDriver[student.driver_id].current_location) {
-          fetchRoute(assignedToDriver[student.driver_id].current_location, destinationCoords);
+          if (destinationCoords && driver[student.driver_id]?.current_location) {
+          fetchRoute(driver[student.driver_id]?.current_location, destinationCoords);
           }
   
         }
@@ -63,10 +63,10 @@ const StudentHomePage = ({student,selectedStudent}) => {
   }, [
       student?.driver_id,
       student?.picked_up,
-      fetchingAssignedToDriversLoading,
+      fetchingdriverLoading,
       fetchingStudentsLoading,
       student?.student_trip_status,
-      assignedToDriver,
+      driver,
       selectedStudent
 ]);
 
@@ -151,9 +151,11 @@ const StudentHomePage = ({student,selectedStudent}) => {
 // Wait untill data load
 if (loadingRoutes) {
   return (
-    <View style={styles.spinner_error_container}>
-      <ActivityIndicator size="large" color={colors.PRIMARY} />
-    </View>
+    <SafeAreaView style={styles.container}>
+      <View style={styles.spinner_error_container}>
+        <ActivityIndicator size="large" color={colors.PRIMARY} />
+      </View>
+    </SafeAreaView>
   );
 }
 
@@ -175,7 +177,7 @@ if(student.driver_id && student.student_trip_status === 'at home') {
     <SafeAreaView style={styles.container}>
       <View style={styles.student_container}>
         <View style={styles.student_box}>
-          <Text style={styles.student_text}>الطالب في المنزل 😴</Text>
+          <Text style={styles.student_text}>الطالب وصل المنزل 😴</Text>
         </View>
         {!student.tomorrow_trip_canceled && (
           <View>
@@ -195,7 +197,7 @@ if(student.driver_id && student.student_trip_status === 'at home') {
                   <Text style={styles.confirm_cancel_btn_text}>تأكيد</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.deny_cancel_btn} onPress={handleDenyCancelTrip}>
-                 <Text style={styles.deny_cancel_btn_text}>رفض</Text>
+                 <Text style={styles.deny_cancel_btn_text}>لا</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -231,8 +233,8 @@ if(student.driver_id && (student.student_trip_status === 'going to school' || st
       <MapView
       provider={PROVIDER_DEFAULT}
       initialRegion={{
-        latitude: assignedToDriver[student.driver_id].current_location.latitude || 0,
-        longitude: assignedToDriver[student.driver_id].current_location.longitude || 0,
+        latitude: driver[student.driver_id]?.current_location?.latitude || 0,
+        longitude: driver[student.driver_id]?.current_location?.longitude || 0,
         latitudeDelta: 0.05,
         longitudeDelta: 0.05,
       }}
@@ -276,8 +278,7 @@ export default StudentHomePage
 
 const styles = StyleSheet.create({
   container:{
-    width:'100%',
-    height:'100%',
+    flex:1,
     backgroundColor: colors.WHITE,
   },
   finding_driver_container:{
@@ -308,7 +309,7 @@ const styles = StyleSheet.create({
     justifyContent:'center'
   },
   student_box:{
-    backgroundColor:'#16B1FF',
+    backgroundColor:colors.PRIMARY,
     width:250,
     padding:10,
     borderRadius:15,
@@ -323,6 +324,7 @@ const styles = StyleSheet.create({
   },
   cancel_trip_btn:{
     backgroundColor:'#FF4C51',
+    backgroundColor:'#16B1FF',
     width:250,
     padding:10,
     borderRadius:15,

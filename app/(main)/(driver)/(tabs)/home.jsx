@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View, ActivityIndicator, TouchableOpacity } from 'react-native';
+import { StyleSheet, Text, View, ActivityIndicator, TouchableOpacity,ScrollView, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useUser } from '@clerk/clerk-expo';
 import { useState,useEffect } from 'react';
@@ -11,11 +11,13 @@ import { DB } from '../../../../firebaseConfig'
 import { Link } from 'expo-router'
 import colors from '../../../../constants/Colors'
 import { useDriverData } from '../../../stateManagment/DriverContext'
+import AntDesign from '@expo/vector-icons/AntDesign'
+import Feather from '@expo/vector-icons/Feather'
 
 const GOOGLE_MAPS_APIKEY = 'AIzaSyA-3LcUn0UzzVovibA1YZIL29n1c0GIi9M'
 
 const Home = () => {
-  const {fetchingUserDataLoading,driverData,fetchingDriverDataLoading,fetchingAllStudents,assignedStudents,fetchingAssignedStudetns} = useDriverData()
+  const {fetchingUserDataLoading,driverData,fetchingDriverDataLoading,assignedStudents,fetchingAssignedStudetns} = useDriverData()
 
   const { isLoaded,user } = useUser()
   const [sortedStudents, setSortedStudents] = useState([])
@@ -26,9 +28,9 @@ const Home = () => {
   const [currentTrip, setCurrentTrip] = useState('first')
   const [fetchingNextLocationLoading,setFetchingNextLocationLoading] = useState(false)
   const [fetchingDriverCurrentLocationLoading,setFetchingDriverCurrentLocationLoading] = useState(true)
-  const [isMarkingStudent, setIsMarkingStudent] = useState(false);
-
-  console.log(driverData[0])
+  const [isMarkingStudent, setIsMarkingStudent] = useState(false)
+  const [checkingPickedUpStudents, setCheckingPickedUpStudents] = useState(false)
+  const [checkingStudentId, setCheckingStudentId] = useState(null)
 
 // Fetch the driver curent location before start calculating
   useEffect(() => {
@@ -43,7 +45,6 @@ const Home = () => {
 
         // Get the driver's current location
         let location = await Location.getCurrentPositionAsync({});
-        console.log(location)
 
         try {
           const driverDoc = doc(DB, 'drivers', driverData[0].id);
@@ -57,7 +58,6 @@ const Home = () => {
 
         setFetchingDriverCurrentLocationLoading(false); // Stop loading once the location is fetched
       } catch (error) {
-        console.log('Error getting driver location:', error.message);
         setFetchingDriverCurrentLocationLoading(false);
       }
     };
@@ -95,6 +95,7 @@ useEffect(() => {
         startingPoint = driverData[0].current_location || assignedStudents[0]?.student_school_location
 
         sorted = assignedStudents.filter(student => student.picked_up === true)
+                                  .filter(student => student.picked_from_school === true)
           .map((student) => ({
             ...student,
             distance: calculateDistance(startingPoint, student?.student_home_location?.coords),
@@ -296,16 +297,20 @@ const handlesecondTripFinish = async () => {
     const driverDoc = doc(DB,'drivers', driverData[0].id)
     await updateDoc(driverDoc, { 
       second_trip_status: 'finished', 
-      second_trip_end: new Date()
+      second_trip_end: new Date(),
+      first_trip_status: 'not started' 
     })
 
     for (const student of assignedStudents) {
       const studentDoc = doc(DB, 'students', student.id);
       await updateDoc(studentDoc, {
-        tomorrow_trip_canceled: false,
         picked_up: false,
         dropped_off: false,
         called_by_driver: false,
+        picked_from_school: false,
+        checked_in_front_of_school: false,
+        tomorrow_trip_canceled: false,
+        student_trip_status: 'at home',
       });
     }
     // Reset state variables
@@ -313,6 +318,8 @@ const handlesecondTripFinish = async () => {
     setCurrentStudentIndex(0);
     setDisplayFinalStation(false);
     setSortedStudents([]);
+    setCheckingPickedUpStudents(false)
+    setCheckingStudentId(null)
     
   } catch (error) {
     //console.log('Error starting the trip:', error)
@@ -331,7 +338,7 @@ const triggerPhoneCall = (phoneNumber) => {
 
 useEffect(() => {
   const checkProximityAndCall = async () => {
-    if (sortedStudents.length === 0 || !driverLocation) {
+    if (sortedStudents.length === 0 || !driverLocation || driverData[0].first_trip_status !== 'started') {
       return;
     }
 
@@ -343,7 +350,6 @@ useEffect(() => {
 
       // Trigger a call if the driver is within 500 meters of the student's home
       if (
-        driverData[0].first_trip_status === 'started',
         distanceToStudent <= 500 && 
         currentStudent.called_by_driver === false &&
         currentStudent.student_trip_status === 'at home' &&
@@ -434,65 +440,71 @@ const onDriverLocationChange = async(event) => {
   }
 };
 
+const HandleMarkStudentFromSchool = async (studentId, status) => {
+  try {
+    // Update the student's status in the database
+    const studentDocRef = doc(DB, 'students', studentId);
+    await updateDoc(studentDocRef, {
+      checked_in_front_of_school: true,
+      picked_from_school: status,
+    });
+
+    // Remove the student from the list in the UI
+      assignedStudents.filter((student) => student.picked_from_school === true)
+  } catch (error) {
+    console.error('Error updating student status:', error);
+  }
+};
+
+const handleMarkAbsentStudent = (studentId) => {
+  setCheckingStudentId(studentId);
+}
+
+const handleCallParent = (phoneNumber) => {
+  Linking.openURL(`tel:${phoneNumber}`);
+}
 
 //Loading State
-if(fetchingUserDataLoading || fetchingDriverDataLoading || fetchingAllStudents || fetchingAssignedStudetns || !isLoaded || fetchingDriverCurrentLocationLoading){
+if(fetchingUserDataLoading || fetchingDriverDataLoading  || fetchingAssignedStudetns || !isLoaded || fetchingDriverCurrentLocationLoading){
   return (
-    <View style={styles.spinner_error_container}>
-      <ActivityIndicator size="large" color={colors.PRIMARY} />
-    </View>
+    <SafeAreaView style={styles.container}>
+      <View style={styles.spinner_error_container}>
+        <ActivityIndicator size="large" color={colors.PRIMARY} />
+      </View>
+    </SafeAreaView>
   )
 }
 
 // if the driver haven't yet registered his info
-  if(!driverData[0]){
-    <View style={styles.no_registered_students}>
-      <Text style={styles.no_student_text}>الرجاء اضافة بياناتك الخاصة</Text>
-      <Link href="/addData" style={styles.link_container}>
-        <Text style={styles.link_text}>اضف الآن</Text>
-      </Link>
-    </View>
-  }
-
+if(!driverData.length) {
+  return(
+    <SafeAreaView style={styles.container}>
+      <View style={styles.no_registered_students}>
+        <Text style={styles.no_student_text}>الرجاء اضافة بياناتك الخاصة</Text>
+        <Link href="/addData" style={styles.link_container}>
+          <Text style={styles.link_text}>اضف الآن</Text>
+        </Link>
+      </View>
+    </SafeAreaView>
+  )
+}
 
 //if the driver have no assigned students
-  if(!assignedStudents.length) {
-    return (
-      <View style={styles.student_map_container}>
-        <View style={styles.finding_driver_loading}>
-          <View style={styles.finding_driver_loading_box}>
-            <ActivityIndicator size={'small'} color={colors.PRIMARY}/>
-            <Text style={styles.finding_driver_loading_text}>نحن بصدد ربط حسابك بطلاب</Text>
-          </View>
-        </View> 
-        <MapView
-          provider={PROVIDER_DEFAULT}
-          initialRegion={{
-            latitude: driverData[0]?.driver_home_location?.coords?.latitude,
-            longitude: driverData[0]?.driver_home_location?.coords?.longitude,
-            latitudeDelta: 0.05,
-            longitudeDelta: 0.05,
-          }}
-          style={styles.map}
-          userInterfaceStyle="light"
-          showsUserLocation
-          onUserLocationChange={onDriverLocationChange}
-          >
-          {driverData[0]?.driver_home_location?.coords && (
-            <Marker
-              coordinate={driverData[0].driver_home_location.coords}
-              title="Driver Location"
-            />
-          )}
-        </MapView>
+if(driverData.length > 0 && assignedStudents.length === 0) {
+  return (
+    <SafeAreaView style={styles.container}>
+      <View style={styles.no_assigned_students_box}>
+        <ActivityIndicator size={'small'} color={colors.WHITE}/>
+        <Text style={styles.no_assigned_students_text}>نحن بصدد ربط حسابك بطلاب</Text>
       </View>
-    )
-  }
- 
+    </SafeAreaView>
+  )
+}
+
 //if the driver didnt start the first trip yet
 if(driverData[0].first_trip_status === "not started" && driverData[0].second_trip_status === "finished") {
   return(
-    <SafeAreaView style={styles.start_trip_container}>
+    <SafeAreaView style={styles.container}>
       <TouchableOpacity style={styles.done_trip_button} onPress={() => handleFirstTripStart()}>
           <Text style={styles.pick_button_text}>إبدأ رحلة الذهاب</Text>
       </TouchableOpacity>
@@ -503,16 +515,62 @@ if(driverData[0].first_trip_status === "not started" && driverData[0].second_tri
 //if the driver didnt start the second trip yet
 if(driverData[0].first_trip_status === "finished" && driverData[0].second_trip_status === "not started") {
   return(
-    <SafeAreaView style={styles.start_trip_container}>
-      <TouchableOpacity style={styles.done_trip_button} onPress={() => 
-      {
-        handlesecondTripStart()
-        setCurrentTrip('second')
-        setCurrentStudentIndex(0)
-        setDisplayFinalStation(false)
-      }}>
-        <Text style={styles.pick_button_text}>إبدأ رحلة العودة</Text>
-      </TouchableOpacity>
+    <SafeAreaView style={styles.container}>
+      {assignedStudents.filter(student => student.picked_up)
+                        .filter(student => student.checked_in_front_of_school === false).length > 0 ? (
+          <TouchableOpacity style={styles.done_trip_button} onPress={() => setCheckingPickedUpStudents(true)}>
+            <Text style={styles.pick_button_text}>إبدأ رحلة العودة</Text>
+          </TouchableOpacity>
+                        ) : (
+          <>
+            {assignedStudents.filter(student => student.picked_up)
+                              .filter(student => student.picked_from_school === true).length > 0 ? (
+              <TouchableOpacity style={styles.done_trip_button} onPress={() => handlesecondTripStart()}>
+                <Text style={styles.pick_button_text}>إبدأ الان</Text>
+              </TouchableOpacity>
+                              ) : (
+              <TouchableOpacity style={styles.done_trip_button} onPress={() => handlesecondTripFinish()}>
+                <Text style={styles.pick_button_text}>انهاء الرحلة</Text>
+              </TouchableOpacity>  
+                              )}
+          </>
+          
+      )}
+      
+      {checkingPickedUpStudents && (
+        <View style={styles.scrollViewContainer}>
+        <ScrollView>
+          {assignedStudents.filter(student => student.picked_up)
+          .filter(student => student.checked_in_front_of_school === false)
+          .map((student,index) => (
+            <View key={index} style={styles.check_students_boxes}>
+              <View style={styles.check_students_box}>
+
+                <TouchableOpacity style={styles.check_students_name} onPress={() => handleMarkAbsentStudent(student.id)}>
+                  <Text style={styles.check_students_name_text}>{student.student_full_name}</Text>
+                </TouchableOpacity>
+
+                {checkingStudentId === student.id && (
+                  <View style={styles.check_students_buttons}>
+                    <TouchableOpacity style={styles.check_students_button} onPress={() => HandleMarkStudentFromSchool(student.id,true)}>
+                      <AntDesign name="checkcircleo" size={24} color="white" />
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.call_student_parent} onPress={() => handleCallParent(student.student_phone_number)}>
+                      <Text style={styles.call_student_parent_text}>اتصل بولي الطالب</Text>
+                      <Feather name="phone" size={24} color="white" />
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.check_students_button} onPress={() => HandleMarkStudentFromSchool(student.id,false)}>
+                      <AntDesign name="closecircleo" size={24} color="white" />
+                    </TouchableOpacity>
+                  </View>
+                )}
+                
+              </View>
+            </View>
+          ))}
+        </ScrollView>
+        </View>
+      )}
     </SafeAreaView>
   )
 }
@@ -688,7 +746,7 @@ export default Home;
 
 const styles = StyleSheet.create({
   container: {
-    height: '100%',
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: colors.WHITE,
@@ -769,9 +827,64 @@ const styles = StyleSheet.create({
     width:280,
     padding:10,
     borderRadius:15,
+    marginBottom:20,
     alignItems:'center',
     justifyContent:'center',
-    backgroundColor:'#16B1FF'
+    backgroundColor:colors.PRIMARY
+  },
+  scrollViewContainer:{
+    height:450,
+  },
+  check_students_boxes:{
+    width:300,
+    marginVertical:5,
+    alignItems:'center',
+  },
+  check_students_box:{
+    
+  },  
+  check_students_name:{
+    width:280,
+    padding:10,
+    borderRadius:15,
+    marginBottom:7,
+    backgroundColor:'#16B1FF',
+    alignItems:'center',
+  },
+  check_students_name_text:{
+    fontFamily: 'Cairo_400Regular',
+    fontSize:14,
+    color:colors.WHITE
+  },
+  check_students_buttons:{
+    width:280,
+    flexDirection:'row-reverse',
+    alignItems:'center',
+    justifyContent:'space-between',
+    marginBottom:10
+  },
+  check_students_button:{
+    width:50,
+    padding:10,
+    borderRadius:15,
+    marginHorizontal:5,
+    alignItems:'center',
+    justifyContent:'center',
+    backgroundColor:colors.SECONDARY
+  },
+  call_student_parent:{
+    width:150,
+    padding:7,
+    borderRadius:15,
+    backgroundColor:'#56CA00',
+    flexDirection:'row-reverse',
+    alignItems:'center',
+    justifyContent:'space-between',
+  },
+  call_student_parent_text:{
+    fontFamily: 'Cairo_400Regular',
+    fontSize:14,
+    color:colors.WHITE,
   },
   spinner_error_container: {
     flex: 1,
@@ -780,6 +893,20 @@ const styles = StyleSheet.create({
   },
   map: {
     flex:1,
+  },
+  no_assigned_students_box:{
+    backgroundColor:colors.PRIMARY,
+    width:280,
+    padding:10,
+    borderRadius:15,
+    flexDirection:'row',
+    alignItems:'center',
+    justifyContent:'space-between'
+  },
+  no_assigned_students_text:{
+    fontFamily: 'Cairo_400Regular',
+    fontSize:15,
+    color:colors.WHITE
   },
   no_registered_students: {
     justifyContent: 'center',
