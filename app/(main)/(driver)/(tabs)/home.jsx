@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View, ActivityIndicator, TouchableOpacity,ScrollView, Linking } from 'react-native';
+import { Alert,StyleSheet, Text, View, ActivityIndicator, TouchableOpacity,ScrollView, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useUser } from '@clerk/clerk-expo';
 import { useState,useEffect } from 'react';
@@ -32,6 +32,10 @@ const Home = () => {
   const [checkingPickedUpStudents, setCheckingPickedUpStudents] = useState(false)
   const [checkingStudentId, setCheckingStudentId] = useState(null)
 
+  const createAlert = (alerMessage) => {
+    Alert.alert(alerMessage)
+  }
+
 // Fetch the driver curent location before start calculating
   useEffect(() => {
     const getDriverLocation = async () => {
@@ -39,7 +43,7 @@ const Home = () => {
         // Request permission to access location
         let { status } = await Location.requestForegroundPermissionsAsync();
         if (status !== 'granted') {
-          console.log('Permission to access location was denied');
+          createAlert('يرجى تفعيل الاذن للوصول الى الموقع')
           return;
         }
 
@@ -53,7 +57,7 @@ const Home = () => {
             current_location: location,
           });
         } catch (error) {
-          console.log('Error updating driver location:', error);
+          createAlert('حدث خطأ اثناء تحديث موقع السائق')
         }
 
         setFetchingDriverCurrentLocationLoading(false); // Stop loading once the location is fetched
@@ -120,7 +124,7 @@ useEffect(() => {
         fetchRoute(startingPoint, nextDestinationCoords);
       }
     } catch (err) {
-      console.log('Error fetching students:', err);
+      createAlert('حدث خطأ اثناء تحديد موقع الطلاب')
     }
   };
 
@@ -152,7 +156,7 @@ const getCoordinates = (location) => {
         setRouteCoordinates(points);
       }
     } catch (error) {
-      console.log('Error fetching route:', error);
+      createAlert('حدث خطأ اثناء تحديد الطريق')
     }finally{
       setFetchingNextLocationLoading(false)
     }
@@ -207,7 +211,6 @@ const getCoordinates = (location) => {
       })
   
     } catch (error) {
-      //console.log('Error starting the trip:', error)
       alert('حدث خطأ اثناء بدء الرحلة') 
     }
   }
@@ -259,7 +262,6 @@ const getCoordinates = (location) => {
       setSortedStudents([]);
 
     } catch (error) {
-      //console.log('Error finishing the trip:', error)
       alert('حدث خطأ اثناء انهاء الرحلة')
     }
   }
@@ -285,7 +287,6 @@ const handlesecondTripStart = async () => {
     }
 
   } catch (error) {
-    //console.log('Error starting the second trip:', error);
     alert('حدث خطأ اثناء بدء الرحلة')
   }
 };
@@ -322,7 +323,6 @@ const handlesecondTripFinish = async () => {
     setCheckingStudentId(null)
     
   } catch (error) {
-    //console.log('Error starting the trip:', error)
     alert('حدث خطأ اثناء انهاء الرحلة')
   }
 }
@@ -332,8 +332,8 @@ const triggerPhoneCall = (phoneNumber) => {
     number: phoneNumber, // Student's phone number
     prompt: true, // Ask the user before making the call
   };
-
-  call(args).catch(console.error);
+  call(args)
+  //call(args).catch(console.error);
 };
 
 useEffect(() => {
@@ -399,12 +399,9 @@ const markStudent = async (status) => {
 
         if (driverLocation && nextCoords) {
           await fetchRoute(driverLocation, nextCoords);
-        } else {
-          console.log("All students are picked up or dropped off.");
         }
       }
     } catch (error) {
-      //console.log('Error updating student status:', error);
       alert('حدث خطأ اثناء تحديث حالة الطالب')
     }finally{
       setIsMarkingStudent(false);
@@ -427,7 +424,7 @@ const onDriverLocationChange = async(event) => {
         current_location: newDriverLocation,
       });
     } catch (error) {
-      console.log('Error updating driver location:', error);
+      createAlert('حدث خطأ اثناء تحديث موقع السائق')
     }
 
     const nextDestination = sortedStudents[currentStudentIndex]?.student_home_location?.coords || 
@@ -452,7 +449,7 @@ const HandleMarkStudentFromSchool = async (studentId, status) => {
     // Remove the student from the list in the UI
       assignedStudents.filter((student) => student.picked_from_school === true)
   } catch (error) {
-    console.error('Error updating student status:', error);
+    createAlert('حدث خطأ اثناء تحديث حالة الطالب')
   }
 };
 
@@ -759,7 +756,7 @@ const styles = StyleSheet.create({
   map_student_name_container:{
     width:'100%',
     position:'absolute',
-    top:30,
+    top:65,
     left:0,
     zIndex:5,
     alignItems:'center',
@@ -777,7 +774,7 @@ const styles = StyleSheet.create({
   map_picked_button_container:{
     width:'100%',
     position:'absolute',
-    top:85,
+    top:120,
     left:0,
     zIndex:5,
     alignItems:'center',
@@ -792,7 +789,7 @@ const styles = StyleSheet.create({
   map_picked_button_container_back_home:{
     width:'100%',
     position:'absolute',
-    top:30,
+    top:75,
     left:0,
     zIndex:5,
     alignItems:'center',

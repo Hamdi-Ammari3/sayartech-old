@@ -1,19 +1,19 @@
-import { StyleSheet, Text, View,FlatList,ActivityIndicator,TouchableOpacity } from 'react-native'
+import { Alert,StyleSheet, Text, View,FlatList,ActivityIndicator,TouchableOpacity } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Link,useRouter } from 'expo-router'
 import colors from '../../../../constants/Colors'
 import StudentCard from '../../../../components/StudentCard'
 import { useAuth } from '@clerk/clerk-expo'
-import { useState } from 'react'
 import SimpleLineIcons from '@expo/vector-icons/SimpleLineIcons'
 import { useStudentData } from '../../../stateManagment/StudentState'
 
 const profile = () => {
 
-  const [error, setError] = useState('')
-
   const {userData,fetchingUserDataLoading,students,fetchingStudentsLoading,driver,fetchingdriverLoading} = useStudentData()
 
+  const createAlert = (alerMessage) => {
+    Alert.alert(alerMessage)
+  }
 
   const { signOut } = useAuth()
   const router = useRouter()
@@ -23,7 +23,7 @@ const profile = () => {
       await signOut();
       router.replace('/(auth)/login')
     } catch (error) {
-      setError('Error signing out: ', error)
+      createAlert('خطأ أثناء تسجيل الخروج')
     }
   };
 
@@ -63,7 +63,7 @@ const profile = () => {
             </Link>
           </View>
         )}
-      />
+        />
     </SafeAreaView>
   )
 }

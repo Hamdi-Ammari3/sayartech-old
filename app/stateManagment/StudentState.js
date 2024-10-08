@@ -9,14 +9,22 @@ const StudentContext = createContext()
 // Provider component
 export const StudentProvider = ({ children }) => {
   const { user,isLoaded } = useUser()
-  const [allStudents,setAllStudents] = useState([])
+
   const [students, setStudents] = useState([])
-  const [driver, setDriver] = useState([{}])
-  const [userData, setUserData] = useState(null)
-  const [fetchingAllStudentsLoading,setFetchingAllStudentsLoading] = useState(true)
-  const [fetchingUserDataLoading, setFetchingUserDataLoading] = useState(true)
   const [fetchingStudentsLoading,setFetchingStudentsLoading] = useState(true)
+
+  const [driver, setDriver] = useState([{}])
   const [fetchingdriverLoading, setFetchingdriverLoading] = useState(true)
+
+  const [userData, setUserData] = useState(null)
+  const [fetchingUserDataLoading, setFetchingUserDataLoading] = useState(true)
+
+  const [allStudents,setAllStudents] = useState([])
+  const [fetchingAllStudentsLoading,setFetchingAllStudentsLoading] = useState(true)
+  
+  const [schools, setSchools] = useState(null)
+  const [fetchingSchoolsLoading, setFetchingSchoolsLoading] = useState(true)
+  
   const [error, setError] = useState(null)
 
   //Fetching All students
@@ -120,6 +128,25 @@ useEffect(() => {
     fetchUserData()
   }, [user])
 
+
+// Fetch School data 
+  useEffect(() => {
+    const schoolInfoCollectionRef = collection(DB, 'schools')
+    const unsubscribe = onSnapshot(
+      schoolInfoCollectionRef,
+      async(querySnapshot) => {
+        const schoolList = querySnapshot.docs
+          .map((doc) => ({
+            id: doc.id,
+            ...doc.data(),
+          }))
+          setSchools(schoolList)
+          setFetchingSchoolsLoading(false)
+        }
+    )
+    return () => unsubscribe();
+  },[])
+
   return (
     <StudentContext.Provider 
       value={{ 
@@ -134,6 +161,9 @@ useEffect(() => {
 
         driver,
         fetchingdriverLoading,
+
+        schools,
+        fetchingSchoolsLoading,
 
         error 
       }}>

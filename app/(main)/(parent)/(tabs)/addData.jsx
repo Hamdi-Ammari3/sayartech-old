@@ -1,4 +1,4 @@
-import { Alert, StyleSheet, Text, View,Keyboard,ActivityIndicator,TextInput } from 'react-native'
+import { Alert, StyleSheet, Text, View,Keyboard,ActivityIndicator } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import React,{useEffect, useState} from 'react'
 import { useRouter } from 'expo-router'
@@ -20,7 +20,6 @@ const addData = () => {
   const router = useRouter()
 
   const [studentFullName,setStudentFullName] = useState('')
-  const [studentAge,setStudentAge] = useState('')
   const [studentSex,setStudentSex] = useState('')
   const [studentSchool,setStudentSchool] = useState('')
   const [location, setLocation] = useState(null)
@@ -33,18 +32,11 @@ const addData = () => {
   const [dateSelected, setDateSelected] = useState(false);
   const [showPicker,setShowPicker] = useState(false);
 
-  const {userData} = useStudentData()
+  const {userData,fetchingUserDataLoading,schools,fetchingSchoolsLoading} = useStudentData()
 
   const createAlert = (alerMessage) => {
     Alert.alert(alerMessage)
   }
-
-  const schools = [
-    { name: 'مدرسة سومر الاهلية', latitude: 31.066750323985293, longitude: 46.25135005023684 },
-    {name:'المدرسة الابتدائية سوسة',latitude:35.82909167294197, longitude:10.639127250832383},
-    {name:'المعهد النموذجي سوسة',latitude:35.841831899593174, longitude:10.590397475413294},
-    {name:'مدرسة النخيل الاهلية للبنات',latitude:33.34158681627086, longitude:43.76347714630668}
-  ]
 
   const sex = [
     { name: 'ذكر'},
@@ -78,7 +70,7 @@ const handleStudentSex = (sexType) => {
     try {
       let { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
-        createAlert('Permission to access location was denied');
+        createAlert('يرجى تفعيل الصلاحيات للوصول الى الموقع')
         setLoading(false);
         return;
       }
@@ -87,8 +79,7 @@ const handleStudentSex = (sexType) => {
       setLocation(location)
 
     } catch (error) {
-      console.error('Error getting location: ', error);
-      createAlert('Could not fetch location. Try again later.');
+      createAlert('يرجى المحاولة مرة أخرى')
     } finally {
       setLoading(false);
     }
@@ -171,6 +162,7 @@ const showDatePicker = () => {
       const studentData = {
         student_full_name: studentFullName,
         student_parent_full_name:userData.user_full_name,
+        student_family_name:userData.user_family_name,
         student_user_id:userData.user_id,
         student_phone_number:userData.phone_number,
         student_birth_date:studentBirthDate,
@@ -225,7 +217,7 @@ const showDatePicker = () => {
     setCarType('')
   }
 
-  if (addingNewStudentLoading) {
+  if (addingNewStudentLoading || fetchingSchoolsLoading || fetchingUserDataLoading) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.spinner_error_container}>

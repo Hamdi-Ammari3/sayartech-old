@@ -32,7 +32,7 @@ export default function Page() {
     try {
       await signOut(); // Sign out from the existing session
     } catch (error) {
-      console.log('Error signing out:', error);
+      createAlert('حدث خطأ أثناء تسجيل الخروج')
     }
   };
 
@@ -49,7 +49,7 @@ export default function Page() {
             const userData = userInfoSnapshot.docs[0].data()
             setUserType(userData.compte_owner_type)
           } else {
-             console.log('we cant find the user type from login screen')
+            createAlert('لا يمكن العثور على نوع المستخدم')
           }
         } catch (error) {
           console.error('Error fetching user data:', error)
@@ -93,7 +93,6 @@ export default function Page() {
       setVerifying(true)
 
     } catch (err) {
-      console.log(JSON.stringify(err, null, 2))
       if(err.errors[0].longMessage === 'Identifier is invalid.' || err.errors[0].longMessage === `Couldn't find your account.`) {
         createAlert('لا يوجد حساب مسجل بهذا الرقم!')
       }
@@ -119,10 +118,10 @@ export default function Page() {
         await setActive({ session: signInAttempt.createdSessionId })
 
       } else {
-        console.log('No user found with this phone number!')
+        createAlert('رمز التاكيد غير صحيح')
       }
     } catch (err) {
-        console.log('Error:', err.message)
+      createAlert('حدث خطأ أثناء التحقق من رمز التاكيد')
     } finally {
       setIsVerifyingCode(false); // End loading
     }

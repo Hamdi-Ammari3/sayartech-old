@@ -1,4 +1,4 @@
-import { Alert, StyleSheet, Text, View,Keyboard,ActivityIndicator,TextInput } from 'react-native'
+import { Alert, StyleSheet, Text, View,Keyboard,ActivityIndicator } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import React,{useEffect, useState} from 'react'
 import { useRouter } from 'expo-router'
@@ -18,7 +18,6 @@ const addData = () => {
   const { user } = useUser()
   const router = useRouter()
 
-  const [studentAge,setStudentAge] = useState('')
   const [studentSex,setStudentSex] = useState('')
   const [studentSchool,setStudentSchool] = useState('')
   const [location, setLocation] = useState(null)
@@ -31,16 +30,11 @@ const addData = () => {
   const [dateSelected, setDateSelected] = useState(false);
   const [showPicker,setShowPicker] = useState(false);
 
-  const {userData,students} = useStudentData()
+  const {userData,fetchingUserDataLoading,students,schools,fetchingSchoolsLoading} = useStudentData()
 
   const createAlert = (alerMessage) => {
     Alert.alert(alerMessage)
   }
-
-  const schools = [
-    { name: 'مدرسة سومر الاهلية', latitude: 31.066750323985293, longitude: 46.25135005023684 },
-    {name:'المدرسة الابتدائية سوسة',latitude:35.82909167294197, longitude:10.639127250832383}
-  ]
 
   const sex = [
     { name: 'ذكر'},
@@ -73,7 +67,7 @@ const addData = () => {
     try {
       let { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
-        createAlert('Permission to access location was denied');
+        createAlert('يرجى تفعيل الصلاحيات لتحديد الموقع');
         setLoading(false);
         return;
       }
@@ -82,7 +76,7 @@ const addData = () => {
       setLocation(location)
 
     } catch (error) {
-      createAlert('Could not fetch location. Try again later.');
+      createAlert('حدث خطأ أثناء تحديد الموقع');
     } finally {
       setLoading(false);
     }
@@ -164,6 +158,7 @@ const showDatePicker = () => {
       const studentsCollectionRef = collection(DB,'students')
       const studentData = {
         student_full_name: userData.user_full_name,
+        student_family_name:userData.user_family_name,
         student_user_id:userData.user_id,
         student_phone_number:userData.phone_number,
         student_birth_date:studentBirthDate,
@@ -217,7 +212,7 @@ const showDatePicker = () => {
   }
 
 // Loading till adding student data
-  if (addingNewStudentLoading) {
+  if (addingNewStudentLoading || fetchingUserDataLoading || fetchingSchoolsLoading) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.spinner_error_container}>

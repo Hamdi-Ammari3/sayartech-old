@@ -1,14 +1,19 @@
-import { StyleSheet, Text, View,FlatList,ActivityIndicator,TouchableOpacity } from 'react-native'
+import { Alert,StyleSheet, Text, View,FlatList,ActivityIndicator,TouchableOpacity } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Link,useRouter } from 'expo-router'
 import colors from '../../../../constants/Colors'
 import { useAuth } from '@clerk/clerk-expo'
 import SimpleLineIcons from '@expo/vector-icons/SimpleLineIcons'
 import { useDriverData } from '../../../stateManagment/DriverContext'
+import AssignedStudents from '../../../../components/AssignedStudents'
 
 const profile = () => {
 
-  const {userData,fetchingUserDataLoading,error} = useDriverData()
+  const {userData,fetchingUserDataLoading,assignedStudents} = useDriverData()
+
+  const createAlert = (alerMessage) => {
+    Alert.alert(alerMessage)
+  }
 
   const { signOut } = useAuth()
   const router = useRouter()
@@ -18,7 +23,7 @@ const profile = () => {
       await signOut();
       router.replace('/(auth)/login')
     } catch (error) {
-      console.error('Error signing out: ', error)
+      createAlert('حدث خطأ أثناء تسجيل الخروج')
     }
   };
 
@@ -45,6 +50,17 @@ const profile = () => {
           <SimpleLineIcons name="logout" size={24} color="white" />
         </TouchableOpacity>
       </View>
+      <FlatList
+        data={assignedStudents}
+        renderItem={({item}) => <AssignedStudents item={item}/>}
+        keyExtractor={item => item.id}
+        contentContainerStyle={styles.flatList_style}
+        ListEmptyComponent={() => (
+          <View style={styles.no_registered_students}>
+            <Text style={styles.no_student_text}>ليس لديك طلاب في حسابك بعد</Text>
+          </View>
+        )}
+        />
     </SafeAreaView>
   )
 }
@@ -94,28 +110,20 @@ const styles = StyleSheet.create({
     marginRight:10
   },
   flatList_style:{
-    marginTop:40,
-    paddingVertical:20,
+    marginTop:30,
+    paddingBottom:40,
   },
-  no_data_box:{
+  no_registered_students: {
     height:100,
     width:350,
-    justifyContent:'space-between',
-    alignItems:'center',
+    marginTop:95,
+    backgroundColor:'#F6F8FA',
+    borderRadius:15,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  no_data_text:{
-    fontFamily:'Cairo_400Regular',
-  },
-  add_kids_link:{
-    width:'80%',
-    padding:15,
-    backgroundColor:colors.PRIMARY,
-    borderRadius:20,
-    textAlign:'center',
-    justifyContent:'center',
-    alignItems:'center',
-    fontFamily:'Cairo_700Bold',
-    color:colors.WHITE
+  no_student_text: {
+    fontFamily: 'Cairo_400Regular',
   },
   spinner_error_container:{
     flex:1,
@@ -127,16 +135,4 @@ const styles = StyleSheet.create({
     fontSize:16,
     color:'darkred'
   },
-  student_school_container:{
-    width:300,
-    marginTop:100,
-    paddingVertical:15,
-    alignItems:'center',
-    backgroundColor:'#F6F8FA',
-    borderRadius:15
-  },
-  student_school_text:{
-    fontFamily:'Cairo_400Regular',
-    fontSize:15,
-  }
 })

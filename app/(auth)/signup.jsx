@@ -53,7 +53,6 @@ export default function SignUpScreen() {
       await signUp.preparePhoneNumberVerification();
       setVerifying(true);
     } catch (err) {
-      console.log(err)
       if(err.errors[0].longMessage === 'phone_number must be a valid phone number according to E.164 international standard.') {
         createAlert('يرجى ادخال رقم هاتف صحيح')
       } else if (err.errors[0].longMessage === 'That phone number is taken. Please try another.') {
@@ -81,7 +80,6 @@ export default function SignUpScreen() {
       const docRef = await addDoc(userInfoCollectionRef,userData)
 
     } catch (error) {
-      console.log('Error adding user data to Firestore:', error);
       createAlert('يوجد خلل الرجاء المحاولة مرة ثانية')
     }
   }
@@ -111,11 +109,9 @@ export default function SignUpScreen() {
           router.replace('(main)/(driver)/(tabs)/home')
         }
       } else {
-        console.log('Verification failed:', JSON.stringify(completeSignUp, null, 2))
         createAlert('يوجد خلل الرجاء المحاولة مرة ثانية')
       }
     } catch (err) {
-      console.log('Verification error:', JSON.stringify(err, null, 2))
       if(err.errors[0].longMessage === 'Incorrect code') {
         createAlert('الرجاء التثبت من رمز التاكيد')
       }

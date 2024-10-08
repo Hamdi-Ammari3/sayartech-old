@@ -1,5 +1,5 @@
 import React,{useState,useEffect} from 'react'
-import { StyleSheet, Text, View, TextInput,ActivityIndicator,TouchableOpacity } from 'react-native'
+import { Alert,StyleSheet, Text, View, TextInput,ActivityIndicator,TouchableOpacity } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import MapView, { Marker, Polyline, PROVIDER_DEFAULT } from 'react-native-maps'
 import axios from 'axios'
@@ -15,6 +15,10 @@ const StudentHomePage = ({student,selectedStudent}) => {
   const [loadingRoutes,setLoadingRoutes] = useState(false)
   const [isCanceling, setIsCanceling] = useState(false);
   const [cancelText, setCancelText] = useState('');
+
+  const createAlert = (alerMessage) => {
+    Alert.alert(alerMessage)
+  }
  
   const {fetchingStudentsLoading,driver,fetchingdriverLoading} = useStudentData()
 
@@ -53,7 +57,7 @@ const StudentHomePage = ({student,selectedStudent}) => {
   
         }
       } catch (error) {
-        console.log('Error fetching students:', err)
+        createAlert('حدث خطأ أثناء تحميل البيانات')
         setLoadingRoutes(false)
       }finally{
         setLoadingRoutes(false)
@@ -82,7 +86,7 @@ const StudentHomePage = ({student,selectedStudent}) => {
         setRouteCoordinates(points);
       }
     } catch (error) {
-      console.log('Error fetching route:', error);
+      createAlert('حدث خطأ أثناء تحميل البيانات')
     }
   };
 
@@ -131,15 +135,14 @@ const StudentHomePage = ({student,selectedStudent}) => {
         await updateDoc(studentDoc, {
           tomorrow_trip_canceled: true,
         });
-        alert('تم إلغاء رحلة الغد بنجاح');
+        createAlert('تم إلغاء رحلة الغد بنجاح');
         setIsCanceling(false);
         setCancelText('');
       } catch (error) {
-        console.log('Error canceling trip:', error);
-        alert('حدث خطأ أثناء إلغاء الرحلة. حاول مرة أخرى.');
+        createAlert('حدث خطأ أثناء إلغاء الرحلة. حاول مرة أخرى.');
       }
     } else {
-      alert('لتاكيد الالغاء يرجى كتابة نعم');
+      createAlert('لتاكيد الالغاء يرجى كتابة نعم');
     }
   };
 
@@ -290,7 +293,7 @@ const styles = StyleSheet.create({
   finding_driver_loading_box:{
     width:250,
     padding:10,
-    backgroundColor:'#16B1FF',
+    backgroundColor:colors.PRIMARY,
     borderRadius:15,
     flexDirection:'row',
     alignItems:'center',

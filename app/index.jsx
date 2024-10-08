@@ -1,4 +1,4 @@
-import { View,ActivityIndicator,StyleSheet } from 'react-native';
+import { Alert,View,ActivityIndicator,StyleSheet } from 'react-native';
 import { Redirect } from 'expo-router';
 import { useState,useEffect } from 'react';
 import { useAuth } from '@clerk/clerk-expo'
@@ -11,6 +11,10 @@ const index = () => {
     const { isSignedIn,userId } = useAuth()
     const [userType,setUserType] = useState('')
     const [fetchingUserType, setFetchingUserType] = useState(true)
+
+    const createAlert = (alerMessage) => {
+      Alert.alert(alerMessage)
+    }
 
   // Fetch the user type from Firestore
   useEffect(() => {
@@ -25,10 +29,10 @@ const index = () => {
             const userData = userInfoSnapshot.docs[0].data()
             setUserType(userData.compte_owner_type)
           } else {
-            console.log('i cant find the user type in index page')
+            createAlert('لا يمكن العثور على نوع المستخدم')
           }
         } catch (error) {
-          console.error('Error fetching user data:', error)
+          createAlert('حدث خطأ أثناء جلب بيانات المستخدم')
         } finally {
           setFetchingUserType(false) // Set loading state to false
         }

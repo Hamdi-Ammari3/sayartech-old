@@ -1,4 +1,4 @@
-import { Alert, StyleSheet, Text, View,Keyboard,ActivityIndicator,Image,Button } from 'react-native'
+import { Alert, StyleSheet, Text, View,Keyboard,ActivityIndicator,Image,TouchableOpacity,ScrollView } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import React,{useEffect, useState} from 'react'
 import { useRouter } from 'expo-router'
@@ -7,12 +7,13 @@ import CustomeButton from '../../../../components/CustomeButton'
 import CustomeInput from '../../../../components/CustomeInput'
 import {DB} from '../../../../firebaseConfig'
 import { addDoc , collection} from 'firebase/firestore'
+import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage'
 import * as Location from 'expo-location'
 import { useUser } from '@clerk/clerk-expo'
 import { Dropdown } from 'react-native-element-dropdown'
-import DateTimePicker from '@react-native-community/datetimepicker';
+import DateTimePicker from '@react-native-community/datetimepicker'
+import * as ImagePicker from 'expo-image-picker'
 import { useDriverData } from '../../../stateManagment/DriverContext'
-import miniVan from '../../../../assets/images/minivan.png'
 
 const addData = () => {
   const { user } = useUser()
@@ -28,6 +29,10 @@ const addData = () => {
   const [dateSelected, setDateSelected] = useState(false);
   const [showPicker,setShowPicker] = useState(false);
   const [addingDriverDataLoading,setAddingDriverDataLoading] = useState(false)
+  const [personalImage,setPersonalImage] = useState(null)
+  const [personalImageLoading,setPersonalImageLoading] = useState(false)
+  const [carImage,setCarImage] = useState(null)
+  const [carImageLoading,setCarImageLoading] = useState(false)
 
   const {userData,driverData,fetchingUserDataLoading,error} = useDriverData()
 
@@ -70,7 +75,7 @@ const addData = () => {
     try {
       let { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
-        createAlert('Permission to access location was denied');
+        createAlert('حدث خطأ اثناء تحديد الموقع. يرجى المحاولة مرة أخرى');
         setLocationLoading(false);
         return;
       }
@@ -78,7 +83,7 @@ const addData = () => {
       setLocation(location)
 
     } catch (error) {
-      createAlert('Could not fetch location. Try again later.');
+      createAlert('حدث خطأ اثناء تحديد الموقع. يرجى المحاولة مرة أخرى');
     } finally {
       setLocationLoading(false)
     }
@@ -87,6 +92,69 @@ const addData = () => {
 //Get the driver birth date
 const showDatePicker = () => {
   setShowPicker(true);
+};
+
+// Function to pick an image
+const pickPersonalImage = async () => {
+  try {
+    let result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: false,
+      aspect: [4, 3],
+      quality: 1,
+    });
+
+    if (!result.canceled) {
+      setPersonalImage(result.assets[0].uri); // Set the selected image URI
+    } else {
+      createAlert('حدث خطأ اثناء اختيار الصورة');
+    }
+  } catch (error) {
+    createAlert('حدث خطأ اثناء اختيار الصورة');
+  }
+};
+
+const PickCarImage = async () => {
+  try {
+    let result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: false,
+      aspect: [4, 3],
+      quality: 1,
+    });
+    if (!result.canceled) {
+      setCarImage(result.assets[0].uri); // Set the selected image URI
+    } else {
+      createAlert('حدث خطأ اثناء اختيار الصورة');
+    }
+  } catch (error) {
+    createAlert('حدث خطأ اثناء اختيار الصورة');
+  }
+};
+
+// Function to upload image to Firebase Storage
+const uploadImage = async (uri) => {
+  const storage = getStorage();
+  try {
+    const response = await fetch(uri);
+    const blob = await response.blob();
+    const filename = uri.substring(uri.lastIndexOf('/') + 1);
+    const storageRef = ref(storage, `drivers/${filename}`);
+    setPersonalImageLoading(true);
+
+    await uploadBytes(storageRef, blob);
+    const downloadURL = await getDownloadURL(storageRef)
+
+    setPersonalImageLoading(false);
+    setCarImageLoading(false);
+    return downloadURL; // Return the image URL
+    
+  } catch (error) {
+    createAlert('حدث خطأ اثناء تحميل الصورة')
+    setPersonalImageLoading(false); // End the loading state
+    setCarImageLoading(false);
+    throw new Error('Failed to upload image');
+  }
 };
 
 // Handle the Date Change
@@ -115,9 +183,19 @@ const showDatePicker = () => {
   setAddingDriverDataLoading(true)
   
   try {
+
+    let personalImageUrl,carImageUrl = null;
+    if (personalImage) {
+      personalImageUrl = await uploadImage(personalImage)
+    }
+    if (carImage) {
+      carImageUrl = await uploadImage(carImage)
+    }
+    
     const driversCollectionRef = collection(DB,'drivers')
     const driverData = {
       driver_full_name: userData.user_full_name,
+      driver_family_name:userData.user_family_name,
       driver_user_id:userData.user_id,
       driver_phone_number:userData.phone_number,
       driver_home_location:location,
@@ -126,6 +204,8 @@ const showDatePicker = () => {
       driver_car_model:carModel,
       driver_car_plate:carPlate,
       driver_car_seats: carSeats,
+      driver_personal_image: personalImageUrl,
+      driver_car_image: carImageUrl,
       students_picked:[],
       first_trip_status:'not started',
       first_trip_start:null,
@@ -147,6 +227,8 @@ const showDatePicker = () => {
     setCarPlate('')
     setCarSeats('')
     setDateSelected(false)
+    setPersonalImage(null)
+    setCarImage(null)
 
   } catch (error) {
      createAlert('. يرجى المحاولة مرة أخرى')
@@ -165,6 +247,8 @@ const showDatePicker = () => {
     setCarPlate('')
     setCarSeats('')
     setDateSelected(false)
+    setPersonalImage(null)
+    setCarImage(null)
   }
 
 // Loading or fetching user data from DB
@@ -195,7 +279,7 @@ const showDatePicker = () => {
       <SafeAreaView style={styles.container}>
         <View style={styles.already_added_container}>
           <View>
-            <Image source={miniVan} style={{width:150,height:150,resizeMode:'contain'}}/>
+            <Image source={{uri:driverData[0]?.driver_car_image}} style={{width:150,height:150,resizeMode:'contain'}}/>
           </View>
           <View style={styles.car_info_box}>
             <Text style={styles.car_info_text}>{driverData[0]?.driver_car_type}</Text> 
@@ -212,7 +296,21 @@ const showDatePicker = () => {
   return(
     <SafeAreaView style={styles.container}>
       <Text style={styles.title}>اضافة بيانات</Text>
-        <View style={styles.form}>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.form} 
+        >
+
+          <CustomeButton
+            title={personalImageLoading ? 'جاري تحميل الصورة' : personalImage ? 'تم اختيار الصورة' : 'صورتك الشخصية'}
+            onPressHandler={pickPersonalImage}
+          />
+          {personalImage && 
+            <View style={styles.image_container}>
+              <Image source={{ uri: personalImage }} style={styles.image_container_image} />
+            </View>
+          }
+
           <CustomeButton
             title={dateSelected ? driverBirthDate.toLocaleDateString() : 'تاريخ الميلاد'}
             onPressHandler={showDatePicker} 
@@ -249,6 +347,17 @@ const showDatePicker = () => {
             value={carPlate}
             onChangeText={(text) => setCarPlate(text)}
           />
+          
+          <CustomeButton
+            title={carImageLoading ? 'جاري تحميل الصورة' : carImage ? 'تم اختيار الصورة' : 'صورة السيارة'}
+            onPressHandler={PickCarImage}
+          />
+          {carImage && 
+            <View style={styles.image_container}>
+              <Image source={{ uri: carImage }} style={styles.image_container_image} />
+            </View>
+          }
+          
           <CustomeButton
             title={location ? 'تم تحديد موقعك' : 'عنوان المنزل'}
             icon={true}
@@ -256,20 +365,30 @@ const showDatePicker = () => {
             onPressHandler={getLocation}
             disabledStatus={location}
           />
+
           <View style={styles.location_msg_view}>
             <Text style={styles.location_warning_text}>بالنقر على "عنوان المنزل" التطبيق يسجل موقعك الحالي كعنوان للمنزل لذا يرجى التواجد في المنزل عند التسجيل</Text>
           </View>
-          <CustomeButton 
-            title={'أضف'}
-            onPressHandler={addNewDriverHandler}
-            disabledStatus={!userData || !location || !carModel || !carPlate}
-          />
+
+          <View style={styles.final_buttons_box}>
+            <TouchableOpacity 
+              onPress={addNewDriverHandler} 
+              disabled={!userData || !location || !carPlate || !carModel || !carType}
+              style={styles.add_data_button}
+            >
+              <Text style={styles.add_data_button_text}>اضف</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+            onPress={clearFormHandler}
+            style={styles.clear_data_button}
+            >
+              <Text style={styles.clear_data_button_text}>الغاء</Text>
+            </TouchableOpacity>
+          </View>
           <Text style={styles.location_warning_text}>* يرجى التأكد من ادخال جميع البيانات</Text>
-          <CustomeButton 
-            title={'الغاء'}
-            onPressHandler={clearFormHandler}
-          />
-        </View>          
+          
+        </ScrollView>    
     </SafeAreaView>
   )
 }
@@ -284,15 +403,25 @@ const styles = StyleSheet.create({
     backgroundColor:colors.WHITE
   },
   title:{
-    marginVertical:20,
+    marginTop:30,
     fontFamily:'Cairo_400Regular',
     fontSize:24,
   },
   form:{
-    marginTop:30,
-    width:'100%',
+    marginTop:20,
+    paddingVertical:10,
     justifyContent:'space-between',
     alignItems:'center',
+  },
+  image_container:{
+    width:100,
+    height:100,
+    marginBottom:10,
+  },
+  image_container_image:{
+    width:100,
+    height:100,
+    resizeMode:'contain',
   },
   dropdown:{
     width:280,
@@ -310,7 +439,7 @@ const styles = StyleSheet.create({
   location_msg_view:{
     width:280,
     paddingHorizontal:10,
-    marginBottom:40,
+    marginBottom:20,
   },
   location_warning_text:{
     fontFamily:'Cairo_700Bold',
@@ -318,14 +447,42 @@ const styles = StyleSheet.create({
     textAlign:'center',
     marginBottom:10,
   },
-  map: {
-    width: '95%',
-    height: 270,
-    marginVertical: 10,
-  },
   distanceText: {
     fontFamily: 'Cairo_700Bold',
     fontSize: 12,
+  },
+  final_buttons_box:{
+    flexDirection:'row-reverse',
+    justifyContent:'space-between',
+    width:280,
+    marginVertical:10,
+  },
+  add_data_button:{
+    width:130,
+    height:50,
+    backgroundColor:colors.PRIMARY,
+    justifyContent:'center',
+    alignItems:'center',
+    borderRadius:15,
+  },
+  add_data_button_text:{
+    fontFamily:'Cairo_700Bold',
+    fontSize:15,
+    color:colors.WHITE
+  },
+  clear_data_button:{
+    width:130,
+    height:50,
+    borderColor:colors.PRIMARY,
+    borderWidth:1,
+    justifyContent:'center',
+    alignItems:'center',
+    borderRadius:15,
+  },
+  clear_data_button_text:{
+    fontFamily:'Cairo_700Bold',
+    fontSize:15,
+    color:colors.PRIMARY
   },
   spinner_error_container: {
     flex: 1,

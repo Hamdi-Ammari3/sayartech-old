@@ -12,6 +12,7 @@ const ChildCard = ({ item,drivers,fetchingDriversLoading }) => {
       </View>
     )
   }
+
   return (
     <View style={styles.container}>
       <View style={styles.student_info_box}>
@@ -20,23 +21,27 @@ const ChildCard = ({ item,drivers,fetchingDriversLoading }) => {
       </View>
       {drivers[item.driver_id] && (
         <View style={styles.driver_car_box}>
+
           <View style={styles.driver_info_box}>
-            <View style={styles.driver_name_box}>
+            <View style={styles.driver_photo_box}>
+              <Image source={{uri:drivers[item.driver_id].driver_personal_image}} style={styles.image}/>
+            </View>
+            <View>
               <Text style={styles.driver_name}>{drivers[item.driver_id].driver_full_name}</Text>
             </View>
-            <View style={styles.driver_photo_box}>
-              <Image source={driverImage} style={styles.image}/>
-            </View>
           </View>
+
           <View style={styles.car_info_box}>
+            <View style={styles.car_photo_box}>
+              <Image source={{uri:drivers[item.driver_id].driver_car_image}} style={styles.image}/>
+            </View>
             <View style={styles.related_info_box}>
-              <Text style={styles.car_seats}>{drivers[item.driver_id].driver_car_plate}</Text>
-              <Text style={{ color: '#858585' }}> | </Text>
+              <Text style={styles.car_name}>{drivers[item.driver_id].driver_car_plate}</Text>
               <Text style={styles.car_name}>{drivers[item.driver_id].driver_car_model}</Text>
-              <Text style={{ color: '#858585' }}> | </Text>
               <Text style={styles.car_name}>{drivers[item.driver_id].driver_car_type}</Text>
             </View>
           </View>
+
         </View>
       )
     }
@@ -56,7 +61,6 @@ const styles = StyleSheet.create({
   },
   student_info_box:{
     width:350,
-    paddingVertical:10,
     flexDirection:'row',
     justifyContent:'space-around',
     alignItems:'center',
@@ -78,23 +82,23 @@ const styles = StyleSheet.create({
   },
   driver_info_box:{
     width:350,
-    paddingVertical:2,
-    flexDirection:'row',
-    justifyContent:'center',
+    height:100,
+    flexDirection:'row-reverse',
+    justifyContent:'space-evenly',
     alignItems:'center',
   },
   image:{
-    height:40,
-    width:40,
-    borderRadius:50
+    height:80,
+    width:80,
+    borderRadius:50,
+    resizeMode:'contain',
   },
   car_info_box:{
     width:350,
     paddingVertical:8,
-    justifyContent:'space-between',
-  },
-  driver_name_box:{
-    marginRight:30,
+    flexDirection:'row-reverse',
+    justifyContent:'space-evenly',
+    alignItems:'center',
   },
   driver_name:{
     fontFamily:'Cairo_400Regular',
@@ -102,8 +106,8 @@ const styles = StyleSheet.create({
     color:'#858585'
   },
   related_info_box:{
-    flexDirection:'row',
-    justifyContent:'space-between',
+    justifyContent:'center',
+    alignItems:'center',
     paddingHorizontal:20
   },
   car_name:{
@@ -111,27 +115,4 @@ const styles = StyleSheet.create({
     fontSize:13,
     color:'#858585'
   },
-  car_seats:{
-    fontFamily:'Cairo_400Regular',
-    fontSize:12,
-    color:'#858585'
-  },
-  driver_photo_box:{
-    width:35,
-    height:35,
-    borderRadius:50,
-    borderWidth:1,
-    borderColor:'#3333',
-     justifyContent:'center',
-    alignItems:'center'
-  },
-  delete_icon:{
-    width:32,
-    height:32,
-    borderRadius:50,
-    backgroundColor:'#D11A2A',
-    justifyContent:'center',
-    alignItems:'center',
-    marginTop:20
-  }
 })

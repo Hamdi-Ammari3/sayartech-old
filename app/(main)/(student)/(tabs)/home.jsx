@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View, ActivityIndicator,Image,TouchableOpacity,TextInput } from 'react-native'
+import { Alert,StyleSheet, Text, View, ActivityIndicator,Image,TouchableOpacity,TextInput } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useUser } from '@clerk/clerk-expo'
 import { useState, useEffect } from 'react'
@@ -22,6 +22,9 @@ const home = () => {
   const [cancelText, setCancelText] = useState('');
 
   const {students,fetchingStudentsLoading,assignedToDriver,fetchingAssignedToDriversLoading} = useStudentData()
+  const createAlert = (alerMessage) => {
+    Alert.alert(alerMessage)
+  }
 
   useEffect(() => {
     if(
@@ -56,7 +59,7 @@ const home = () => {
   
         }
       } catch (error) {
-        console.log('Error fetching students:', err)
+        createAlert('حدث خطأ أثناء تحديث الموقع')
         setLoadingRoutes(false)
       }finally{
         setLoadingRoutes(false)
@@ -84,7 +87,7 @@ const home = () => {
         setRouteCoordinates(points);
       }
     } catch (error) {
-      console.log('Error fetching route:', error);
+      createAlert('حدث خطأ أثناء تحديث الموقع')
     }
   };
 
@@ -133,15 +136,14 @@ const home = () => {
         await updateDoc(studentDoc, {
           tomorrow_trip_canceled: true,
         });
-        alert('تم إلغاء رحلة الغد بنجاح');
+        createAlert('تم إلغاء رحلة الغد بنجاح');
         setIsCanceling(false);
         setCancelText('');
       } catch (error) {
-        console.log('Error canceling trip:', error);
-        alert('حدث خطأ أثناء إلغاء الرحلة. حاول مرة أخرى.');
+        createAlert('حدث خطأ أثناء إلغاء الرحلة. حاول مرة أخرى.');
       }
     } else {
-      alert('لتاكيد الالغاء يرجى كتابة نعم');
+      createAlert('لتاكيد الالغاء يرجى كتابة نعم');
     }
   };
 
@@ -340,7 +342,7 @@ const styles = StyleSheet.create({
   finding_driver_loading_box:{
     width:250,
     padding:10,
-    backgroundColor:'#16B1FF',
+    backgroundColor:colors.PRIMARY,
     borderRadius:15,
     flexDirection:'row',
     alignItems:'center',

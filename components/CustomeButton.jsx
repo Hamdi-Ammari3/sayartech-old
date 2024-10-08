@@ -53,5 +53,14 @@ const styles = StyleSheet.create({
 })
 
 /*
-
+<CustomeButton 
+            title={'أضف'}
+            onPressHandler={addNewDriverHandler}
+            disabledStatus={!userData || !location || !carModel || !carPlate}
+          />
+          <Text style={styles.location_warning_text}>* يرجى التأكد من ادخال جميع البيانات</Text>
+          <CustomeButton 
+            title={'الغاء'}
+            onPressHandler={clearFormHandler}
+          />
 */
