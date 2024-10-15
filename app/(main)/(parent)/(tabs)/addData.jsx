@@ -22,14 +22,13 @@ const addData = () => {
   const [studentSex,setStudentSex] = useState('')
   const [studentSchool,setStudentSchool] = useState('')
   const [location, setLocation] = useState(null)
-  const [locationOn, setLocationOn] = useState(false)
   const [schoolLocation, setSchoolLocation] = useState(null)
   const [distance, setDistance] = useState(null)
   const [carType,setCarType] = useState('')
   const [addingNewStudentLoading,setAddingNewStudentLoading] = useState(false)
   const [studentBirthDate,setStudentBirthDate] = useState(new Date())
-  const [dateSelected, setDateSelected] = useState(false);
-  const [showPicker,setShowPicker] = useState(false);
+  const [dateSelected, setDateSelected] = useState(false)
+  const [showPicker,setShowPicker] = useState(false)
 
   const {userData,fetchingUserDataLoading,schools,fetchingSchoolsLoading} = useStudentData()
 
@@ -62,23 +61,15 @@ const handleStudentSex = (sexType) => {
   }
 
 // Get the current location
-useEffect(() => {
-  (async () => {
-  
-    let { status } = await Location.requestForegroundPermissionsAsync();
-    if (status !== 'granted') {
-      createAlert('عذراً، لا يمكننا الوصول إلى موقعك بدون إذن');
-      return;
-    }
-
-    let location = await Location.getCurrentPositionAsync({});
-    setLocation(location)
-  })();
-}, [locationOn])
-
-  const turnLocationOn = () => {
-    setLocationOn(prevLocationOn => !prevLocationOn)
+const getLocation = async () => {
+  let { status } = await Location.requestForegroundPermissionsAsync();
+  if (status !== 'granted') {
+    createAlert('عذراً، لا يمكننا الوصول إلى موقعك بدون إذن');
+    return;
   }
+  let location = await Location.getCurrentPositionAsync({});
+  setLocation(location)
+}
 
 // Handle school name change
   const handleSchoolChange = (schoolName) => {
@@ -185,7 +176,6 @@ const showDatePicker = () => {
       setDateSelected(false)
       setStudentSex('')
       setLocation(null)
-      setLocationOn(false)
       setStudentSchool('')
       setSchoolLocation(null)
       setDistance(null)
@@ -205,7 +195,6 @@ const showDatePicker = () => {
     setDateSelected(false)
     setStudentSex('')
     setLocation(null)
-    setLocationOn(false)
     setStudentSchool('')
     setSchoolLocation(null)
     setDistance(null)
@@ -287,7 +276,7 @@ const showDatePicker = () => {
             title={location !== null ? 'تم تحديد موقعك' : 'عنوان المنزل'}
             icon={true}
             iconType={location !== null ? 'done' : 'location'}
-            onPressHandler={turnLocationOn}
+            onPressHandler={getLocation}
             disabledStatus={location !== null}
           />
           <View style={styles.location_msg_view}>

@@ -20,7 +20,6 @@ const addData = () => {
   const router = useRouter()
 
   const [location, setLocation] = useState(null)
-  const [locationOn, setLocationOn] = useState(false)
   const [carType,setCarType] = useState('')
   const [carPlate,setCarPlate] = useState('')
   const [carSeats,setCarSeats] = useState('')
@@ -69,23 +68,15 @@ const addData = () => {
   }, [carType])
 
 // Get the current location
-useEffect(() => {
-  (async () => {
-  
-    let { status } = await Location.requestForegroundPermissionsAsync();
-    if (status !== 'granted') {
-      createAlert('عذراً، لا يمكننا الوصول إلى موقعك بدون إذن');
-      return;
-    }
-
-    let location = await Location.getCurrentPositionAsync({});
-    setLocation(location)
-  })();
-}, [locationOn])
-
-  const turnLocationOn = () => {
-    setLocationOn(prevLocationOn => !prevLocationOn)
+const getLocation = async () => {
+  let { status } = await Location.requestForegroundPermissionsAsync();
+  if (status !== 'granted') {
+    createAlert('عذراً، لا يمكننا الوصول إلى موقعك بدون إذن');
+    return;
   }
+  let location = await Location.getCurrentPositionAsync({});
+  setLocation(location)
+}
 
 //Get the driver birth date
 const showDatePicker = () => {
@@ -219,7 +210,6 @@ const uploadImage = async (uri) => {
     
     // Clear the form fields
     setLocation(null)
-    setLocationOn(false)
     setCarType('')
     setCarModel('')
     setCarPlate('')
@@ -239,7 +229,6 @@ const uploadImage = async (uri) => {
 // Clear the form fields
   const clearFormHandler = () => {
     setLocation(null)
-    setLocationOn(false)
     setCarType('')
     setCarModel('')
     setCarPlate('')
@@ -360,7 +349,7 @@ const uploadImage = async (uri) => {
             title={location !== null ? 'تم تحديد موقعك' : 'عنوان المنزل'}
             icon={true}
             iconType={location !== null ? 'done' : 'location'}
-            onPressHandler={turnLocationOn}
+            onPressHandler={getLocation}
             disabledStatus={location !== null}
           />
 
