@@ -809,7 +809,7 @@ const styles = StyleSheet.create({
     borderRadius:15,
     alignItems:'center',
     justifyContent:'center',
-    backgroundColor:'#FF4C51'
+    backgroundColor: '#FF4C51',
   },
   pick_button_text:{
     fontFamily: 'Cairo_700Bold',

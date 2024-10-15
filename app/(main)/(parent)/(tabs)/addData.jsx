@@ -1,4 +1,4 @@
-import { Alert, StyleSheet, Text, View,Keyboard,ActivityIndicator } from 'react-native'
+import { Alert, StyleSheet, Text, View,ActivityIndicator } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import React,{useEffect, useState} from 'react'
 import { useRouter } from 'expo-router'
@@ -14,7 +14,6 @@ import { useUser } from '@clerk/clerk-expo'
 import { Dropdown } from 'react-native-element-dropdown'
 import { useStudentData } from '../../../stateManagment/StudentState'
 
-
 const addData = () => {
   const { user } = useUser()
   const router = useRouter()
@@ -23,10 +22,10 @@ const addData = () => {
   const [studentSex,setStudentSex] = useState('')
   const [studentSchool,setStudentSchool] = useState('')
   const [location, setLocation] = useState(null)
+  const [locationOn, setLocationOn] = useState(false)
   const [schoolLocation, setSchoolLocation] = useState(null)
   const [distance, setDistance] = useState(null)
   const [carType,setCarType] = useState('')
-  const [loading,setLoading] = useState(false)
   const [addingNewStudentLoading,setAddingNewStudentLoading] = useState(false)
   const [studentBirthDate,setStudentBirthDate] = useState(new Date())
   const [dateSelected, setDateSelected] = useState(false);
@@ -62,27 +61,23 @@ const handleStudentSex = (sexType) => {
     setCarType(vehicle)
   }
 
-
-//Get student home Location
-  const getLocation = async () => {
-    Keyboard.dismiss()
-    setLoading(true)
-    try {
-      let { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        createAlert('يرجى تفعيل الصلاحيات للوصول الى الموقع')
-        setLoading(false);
-        return;
-      }
-
-      let location = await Location.getCurrentPositionAsync({});
-      setLocation(location)
-
-    } catch (error) {
-      createAlert('يرجى المحاولة مرة أخرى')
-    } finally {
-      setLoading(false);
+// Get the current location
+useEffect(() => {
+  (async () => {
+  
+    let { status } = await Location.requestForegroundPermissionsAsync();
+    if (status !== 'granted') {
+      createAlert('عذراً، لا يمكننا الوصول إلى موقعك بدون إذن');
+      return;
     }
+
+    let location = await Location.getCurrentPositionAsync({});
+    setLocation(location)
+  })();
+}, [locationOn])
+
+  const turnLocationOn = () => {
+    setLocationOn(prevLocationOn => !prevLocationOn)
   }
 
 // Handle school name change
@@ -149,12 +144,11 @@ const showDatePicker = () => {
       return
     }
 
-    if (!location || !schoolLocation) {
+    if (!location) {
       createAlert('يرجى تحديد موقعك اولا')
       return
     }
 
-    setLoading(true)
     setAddingNewStudentLoading(true)
 
     try {
@@ -191,6 +185,7 @@ const showDatePicker = () => {
       setDateSelected(false)
       setStudentSex('')
       setLocation(null)
+      setLocationOn(false)
       setStudentSchool('')
       setSchoolLocation(null)
       setDistance(null)
@@ -199,7 +194,6 @@ const showDatePicker = () => {
     } catch (error) {
        createAlert('. يرجى المحاولة مرة أخرى')
     } finally{
-      setLoading(false)
       setAddingNewStudentLoading(false)
       router.replace('/home')      
     }
@@ -211,6 +205,7 @@ const showDatePicker = () => {
     setDateSelected(false)
     setStudentSex('')
     setLocation(null)
+    setLocationOn(false)
     setStudentSchool('')
     setSchoolLocation(null)
     setDistance(null)
@@ -289,25 +284,23 @@ const showDatePicker = () => {
              }}
           />
           <CustomeButton
-            title={location ? 'تم تحديد موقعك' : 'عنوان المنزل'}
+            title={location !== null ? 'تم تحديد موقعك' : 'عنوان المنزل'}
             icon={true}
-            iconType={location ? 'done' : 'location'}
-            onPressHandler={getLocation}
-            disabledStatus={location}
+            iconType={location !== null ? 'done' : 'location'}
+            onPressHandler={turnLocationOn}
+            disabledStatus={location !== null}
           />
           <View style={styles.location_msg_view}>
-            {location && schoolLocation ? (
-              <>
-                <Text style={styles.location_warning_text}>المسافة بين منزل الطالب و المدرسة: {distance} كلم</Text>
-              </>
+            {distance ? (
+              <Text style={styles.location_warning_text}>المسافة بين منزل الطالب و المدرسة: {distance} كلم</Text>
             ) : (
-              <Text style={styles.location_warning_text}>بالنقر على "عنوان المنزل" التطبيق يسجل موقعك الحالي كعنوان للمنزل لذا يرجى التواجد في المنزل عند التسجيل</Text>
+              <Text style={styles.location_warning_text}>التطبيق يسجل موقعك الحالي كعنوان للمنزل لذا يرجى التواجد في المنزل عند التسجيل و تفعيل خدمة تحديد الموقع الخاصة بالهاتف</Text>
             )}
           </View>
           <CustomeButton 
             title={'أضف'}
             onPressHandler={addNewStudentHandler}
-             disabledStatus={!studentFullName || !location || !studentSchool || !studentBirthDate || !studentSex || !carType}
+             disabledStatus={!studentFullName || !studentSchool || !studentBirthDate || !studentSex || !carType}
           />
           <Text style={styles.location_warning_text}>* يرجى التأكد من ادخال جميع البيانات</Text>
           <CustomeButton 

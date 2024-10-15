@@ -1,7 +1,6 @@
 import { StyleSheet, Text, View, ActivityIndicator,Image } from 'react-native'
 import React from 'react'
 import colors from '../constants/Colors'
-import driverImage from '../assets/images/driver.png'
 
 const ChildCard = ({ item,drivers,fetchingDriversLoading }) => {
     
@@ -22,17 +21,18 @@ const ChildCard = ({ item,drivers,fetchingDriversLoading }) => {
       {drivers[item.driver_id] && (
         <View style={styles.driver_car_box}>
 
-          <View style={styles.driver_info_box}>
-            <View style={styles.driver_photo_box}>
+          <View style={styles.driver_info}>
+            <View style={styles.photo_box}>
               <Image source={{uri:drivers[item.driver_id].driver_personal_image}} style={styles.image}/>
             </View>
-            <View>
+            <View style={styles.related_info_box}>
               <Text style={styles.driver_name}>{drivers[item.driver_id].driver_full_name}</Text>
+              <Text style={styles.driver_name}>{drivers[item.driver_id].driver_family_name}</Text>
             </View>
           </View>
 
-          <View style={styles.car_info_box}>
-            <View style={styles.car_photo_box}>
+          <View style={styles.driver_info}>
+            <View style={styles.photo_box}>
               <Image source={{uri:drivers[item.driver_id].driver_car_image}} style={styles.image}/>
             </View>
             <View style={styles.related_info_box}>
@@ -41,7 +41,6 @@ const ChildCard = ({ item,drivers,fetchingDriversLoading }) => {
               <Text style={styles.car_name}>{drivers[item.driver_id].driver_car_type}</Text>
             </View>
           </View>
-
         </View>
       )
     }
@@ -80,25 +79,24 @@ const styles = StyleSheet.create({
     justifyContent:'space-between',
     alignItems:'center',
   },
-  driver_info_box:{
+  driver_info:{
     width:350,
     height:100,
     flexDirection:'row-reverse',
-    justifyContent:'space-evenly',
+    justifyContent:'center',
+    alignItems:'center',
+  },
+  photo_box:{
+    height:100,
+    width:100,
+    justifyContent:'center',
     alignItems:'center',
   },
   image:{
     height:80,
     width:80,
-    borderRadius:50,
+    borderRadius:5,
     resizeMode:'contain',
-  },
-  car_info_box:{
-    width:350,
-    paddingVertical:8,
-    flexDirection:'row-reverse',
-    justifyContent:'space-evenly',
-    alignItems:'center',
   },
   driver_name:{
     fontFamily:'Cairo_400Regular',
@@ -108,7 +106,8 @@ const styles = StyleSheet.create({
   related_info_box:{
     justifyContent:'center',
     alignItems:'center',
-    paddingHorizontal:20
+    paddingHorizontal:20,
+    width:200,
   },
   car_name:{
     fontFamily:'Cairo_400Regular',

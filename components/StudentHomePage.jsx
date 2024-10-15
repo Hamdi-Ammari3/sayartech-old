@@ -217,7 +217,7 @@ if(student.driver_id && student.student_trip_status === 'at school') {
     <SafeAreaView style={styles.container}>
       <View style={styles.student_container}>
         <View style={styles.student_box}>
-          <Text style={styles.student_text}>الطالب في المدرسة 📖</Text>
+          <Text style={styles.student_text}>الطالب وصل المدرسة 📖</Text>
         </View>
       </View>
     </SafeAreaView>
@@ -275,6 +275,7 @@ if(student.driver_id && (student.student_trip_status === 'going to school' || st
     </SafeAreaView>
   )
 }
+
 }
 
 export default StudentHomePage
@@ -397,18 +398,18 @@ const styles = StyleSheet.create({
     color:colors.WHITE,
   },
   student_map_container:{
-    width:'100%',
-    height:'100%',
+    width:500,
+    height:800,
     position:'relative',
   },
   student_route_status_container:{
-    width:'100%',
+    width:500,
     position:'absolute',
-    top:90,
+    top:100,
     left:0,
     zIndex:100,
     alignItems:'center',
-    justifyContent:'center'
+    justifyContent:'center',
   },
   student_route_status_box:{
     backgroundColor:colors.WHITE,

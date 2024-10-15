@@ -1,4 +1,4 @@
-import { Alert, StyleSheet, Text, View,Keyboard,ActivityIndicator,Image,TouchableOpacity,ScrollView } from 'react-native'
+import { Alert, StyleSheet, Text, View,ActivityIndicator,Image,TouchableOpacity,ScrollView } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import React,{useEffect, useState} from 'react'
 import { useRouter } from 'expo-router'
@@ -20,7 +20,7 @@ const addData = () => {
   const router = useRouter()
 
   const [location, setLocation] = useState(null)
-  const [locationLloading,setLocationLoading] = useState(false)
+  const [locationOn, setLocationOn] = useState(false)
   const [carType,setCarType] = useState('')
   const [carPlate,setCarPlate] = useState('')
   const [carSeats,setCarSeats] = useState('')
@@ -34,7 +34,7 @@ const addData = () => {
   const [carImage,setCarImage] = useState(null)
   const [carImageLoading,setCarImageLoading] = useState(false)
 
-  const {userData,driverData,fetchingUserDataLoading,error} = useDriverData()
+  const {userData,driverData,fetchingUserDataLoading} = useDriverData()
 
   const createAlert = (alerMessage) => {
     Alert.alert(alerMessage)
@@ -68,25 +68,23 @@ const addData = () => {
     }
   }, [carType])
 
-//Get Driver home Location
-  const getLocation = async () => {
-    Keyboard.dismiss()
-    setLocationLoading(true)
-    try {
-      let { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') {
-        createAlert('حدث خطأ اثناء تحديد الموقع. يرجى المحاولة مرة أخرى');
-        setLocationLoading(false);
-        return;
-      }
-      let location = await Location.getCurrentPositionAsync({});
-      setLocation(location)
-
-    } catch (error) {
-      createAlert('حدث خطأ اثناء تحديد الموقع. يرجى المحاولة مرة أخرى');
-    } finally {
-      setLocationLoading(false)
+// Get the current location
+useEffect(() => {
+  (async () => {
+  
+    let { status } = await Location.requestForegroundPermissionsAsync();
+    if (status !== 'granted') {
+      createAlert('عذراً، لا يمكننا الوصول إلى موقعك بدون إذن');
+      return;
     }
+
+    let location = await Location.getCurrentPositionAsync({});
+    setLocation(location)
+  })();
+}, [locationOn])
+
+  const turnLocationOn = () => {
+    setLocationOn(prevLocationOn => !prevLocationOn)
   }
 
 //Get the driver birth date
@@ -179,7 +177,6 @@ const uploadImage = async (uri) => {
     return
   }
 
-  setLocationLoading(true)
   setAddingDriverDataLoading(true)
   
   try {
@@ -222,6 +219,7 @@ const uploadImage = async (uri) => {
     
     // Clear the form fields
     setLocation(null)
+    setLocationOn(false)
     setCarType('')
     setCarModel('')
     setCarPlate('')
@@ -233,7 +231,6 @@ const uploadImage = async (uri) => {
   } catch (error) {
      createAlert('. يرجى المحاولة مرة أخرى')
   } finally{
-    setLocationLoading(false)
     setAddingDriverDataLoading(false)
     router.replace('/home')      
   }
@@ -242,6 +239,7 @@ const uploadImage = async (uri) => {
 // Clear the form fields
   const clearFormHandler = () => {
     setLocation(null)
+    setLocationOn(false)
     setCarType('')
     setCarModel('')
     setCarPlate('')
@@ -359,21 +357,21 @@ const uploadImage = async (uri) => {
           }
           
           <CustomeButton
-            title={location ? 'تم تحديد موقعك' : 'عنوان المنزل'}
+            title={location !== null ? 'تم تحديد موقعك' : 'عنوان المنزل'}
             icon={true}
-            iconType={location ? 'done' : 'location'}
-            onPressHandler={getLocation}
-            disabledStatus={location}
+            iconType={location !== null ? 'done' : 'location'}
+            onPressHandler={turnLocationOn}
+            disabledStatus={location !== null}
           />
 
           <View style={styles.location_msg_view}>
-            <Text style={styles.location_warning_text}>بالنقر على "عنوان المنزل" التطبيق يسجل موقعك الحالي كعنوان للمنزل لذا يرجى التواجد في المنزل عند التسجيل</Text>
+            <Text style={styles.location_warning_text}>التطبيق يسجل موقعك الحالي كعنوان للمنزل لذا يرجى التواجد في المنزل عند التسجيل و تفعيل خدمة تحديد الموقع الخاصة بالهاتف</Text>
           </View>
 
           <View style={styles.final_buttons_box}>
             <TouchableOpacity 
               onPress={addNewDriverHandler} 
-              disabled={!userData || !location || !carPlate || !carModel || !carType}
+              disabled={!userData || !carPlate || !carModel || !carType}
               style={styles.add_data_button}
             >
               <Text style={styles.add_data_button_text}>اضف</Text>
