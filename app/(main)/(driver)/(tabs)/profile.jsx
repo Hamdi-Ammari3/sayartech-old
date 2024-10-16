@@ -1,22 +1,27 @@
+import { useState } from 'react'
 import { Alert,StyleSheet, Text, View,FlatList,ActivityIndicator,TouchableOpacity } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { Link,useRouter } from 'expo-router'
+import { useRouter } from 'expo-router'
 import colors from '../../../../constants/Colors'
-import { useAuth } from '@clerk/clerk-expo'
+import { useAuth,useUser } from '@clerk/clerk-expo'
+import { deleteDoc, collection, query, where, getDocs } from 'firebase/firestore'
+import { DB } from '../../../../firebaseConfig'
 import SimpleLineIcons from '@expo/vector-icons/SimpleLineIcons'
+import MaterialIcons from '@expo/vector-icons/MaterialIcons'
 import { useDriverData } from '../../../stateManagment/DriverContext'
 import AssignedStudents from '../../../../components/AssignedStudents'
 
 const profile = () => {
+  const [deleteAccountLoading, setDeleteAccountLoading] = useState(false);
+  const { signOut } = useAuth()
+  const {user} = useUser()
+  const router = useRouter()
 
   const {userData,fetchingUserDataLoading,assignedStudents} = useDriverData()
 
   const createAlert = (alerMessage) => {
     Alert.alert(alerMessage)
   }
-
-  const { signOut } = useAuth()
-  const router = useRouter()
 
   const handleSignOut = async () => {
     try {
@@ -27,8 +32,58 @@ const profile = () => {
     }
   };
 
+// Ask users first if they really want to delete their account
+  const confirmDeleteAccount = () => {
+    Alert.alert(
+       'تاكيد مسح الحساب', // Title
+       'هل ترغب فعلا في مسح حسابك', // Message
+       [
+         {
+           text: 'الغاء',
+           style: 'cancel', // Cancels the alert
+         },
+         {
+           text: 'تاكيد', // If the user confirms, proceed with deletion
+           style: 'destructive', // Styling to indicate it's a destructive action
+           onPress: handleDeleteAccount, // Call the delete function if user confirms
+         },
+       ],
+      { cancelable: true } // Allow dismissal by tapping outside
+     );
+   };
+  
+  const handleDeleteAccount = async () => {
+    try {
+      setDeleteAccountLoading(true);
+      // Step 1: Delete user from Clerk
+      await user.delete(); // Deletes the current user from Clerk
+  
+      // Step 2: Delete user data from Firebase Firestore
+      const userInfoCollectionRef = collection(DB, 'users');
+      const q = query(userInfoCollectionRef, where('user_id', '==', user.id));
+      const userDocs = await getDocs(q);
+  
+      if (!userDocs.empty) {
+         // Deleting all user's related data
+        const userDocRef = userDocs.docs[0].ref;
+        await deleteDoc(userDocRef);
+       }
+  
+      // Step 3: Log out user and redirect
+      await signOut();
+      router.replace('/welcome'); // Redirect to login or another screen
+  
+      createAlert('تم مسح حسابك بنجاح');
+    } catch (error) {
+      console.error('Error deleting account:', error);
+      createAlert('حدث خطأ أثناء مسح الحساب');
+     }finally{
+       setDeleteAccountLoading(false);
+     }
+   };
+
   // Loading or fetching user type state
-  if (fetchingUserDataLoading) {
+  if (fetchingUserDataLoading || deleteAccountLoading) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.spinner_error_container}>
@@ -45,10 +100,18 @@ const profile = () => {
           <Text style={styles.user_info_text}>{userData.user_full_name}</Text>
           <Text style={styles.user_info_text}>{userData.phone_number}</Text>
         </View>
-        <TouchableOpacity style={styles.button} onPress={handleSignOut}>
-          <Text style={styles.logout_text}>خروج</Text>
-          <SimpleLineIcons name="logout" size={24} color="white" />
-        </TouchableOpacity>
+
+        <View style={styles.button_container}>
+          <TouchableOpacity style={styles.logout_button} onPress={handleSignOut}>
+            <Text style={styles.logout_text}>خروج</Text>
+            <SimpleLineIcons name="logout" size={20} color="white" />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.delete_button} onPress={confirmDeleteAccount}>
+            <Text style={styles.delete_text}>مسح الحساب</Text>
+            <MaterialIcons name="delete-outline" size={24} color="#898989" />
+          </TouchableOpacity>
+        </View>
+
       </View>
       <FlatList
         data={assignedStudents}
@@ -94,19 +157,42 @@ const styles = StyleSheet.create({
     fontSize:14,
     color:colors.WHITE
   },
-  button:{
-    width:120,
-    height:45,
-    backgroundColor:colors.PRIMARY,
+  button_container:{
+    flexDirection:'row-reverse',
+    justifyContent:'space-around',
+    width:340,
+    height:60,
+    marginBottom:10
+  },
+  logout_button:{
+    width:140,
+    height:50,
+    backgroundColor:colors.BLUE,
     borderRadius:15,
     flexDirection:'row',
     alignItems:'center',
     justifyContent:'center'
   },
   logout_text:{
-    fontFamily:'Cairo_700Bold',
-    fontSize:16,
+    fontFamily: 'Cairo_400Regular',
+    fontSize:14,
     color:colors.WHITE,
+    marginRight:10
+  },
+  delete_button:{
+    width:140,
+    height:50,
+    borderColor:'#DAD9D8',
+    borderWidth:1,
+    borderRadius:15,
+    flexDirection:'row',
+    alignItems:'center',
+    justifyContent:'center'
+  },
+  delete_text:{
+    color:'#898989',
+    fontFamily: 'Cairo_400Regular',
+    fontSize:14,
     marginRight:10
   },
   flatList_style:{
