@@ -24,6 +24,9 @@ export const StudentProvider = ({ children }) => {
   
   const [schools, setSchools] = useState(null)
   const [fetchingSchoolsLoading, setFetchingSchoolsLoading] = useState(true)
+
+  const [states, setStates] = useState(null)
+  const [fetchingState, setFetchingState] = useState(true)
   
   const [error, setError] = useState(null)
 
@@ -147,6 +150,24 @@ useEffect(() => {
     return () => unsubscribe();
   },[])
 
+//Fetch State data
+useEffect(() => {
+  const schoolInfoCollectionRef = collection(DB, 'states')
+    const unsubscribe = onSnapshot(
+      schoolInfoCollectionRef,
+      async(querySnapshot) => {
+        const stateList = querySnapshot.docs
+          .map((doc) => ({
+            id: doc.id,
+            ...doc.data(),
+          }))
+          setStates(stateList)
+          setFetchingState(false)
+        }
+    )
+    return () => unsubscribe();
+  }, []);
+
   return (
     <StudentContext.Provider 
       value={{ 
@@ -164,6 +185,9 @@ useEffect(() => {
 
         schools,
         fetchingSchoolsLoading,
+
+        states,
+        fetchingState,
 
         error 
       }}>

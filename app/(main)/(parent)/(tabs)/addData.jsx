@@ -1,4 +1,4 @@
-import { Alert, StyleSheet, Text, View,ActivityIndicator } from 'react-native'
+import { Alert, StyleSheet, Text, View,ActivityIndicator,ScrollView } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import React,{useEffect, useState} from 'react'
 import { useRouter } from 'expo-router'
@@ -6,7 +6,7 @@ import colors from '../../../../constants/Colors'
 import CustomeInput from '../../../../components/CustomeInput'
 import CustomeButton from '../../../../components/CustomeButton'
 import {DB} from '../../../../firebaseConfig'
-import { addDoc , collection } from 'firebase/firestore'
+import { addDoc , collection,onSnapshot } from 'firebase/firestore'
 import * as Location from 'expo-location'
 import haversine from 'haversine'
 import DateTimePicker from '@react-native-community/datetimepicker'
@@ -22,6 +22,11 @@ const addData = () => {
   const [studentSex,setStudentSex] = useState('')
   const [studentSchool,setStudentSchool] = useState('')
   const [location, setLocation] = useState(null)
+  const [homeAdress,setHomeAdress] = useState('')
+  const [studentState,setStudentState] = useState('')
+  const [cities,setCities] = useState([])
+  const [studentCity,setStudentCity] = useState('')
+  const [studentStreet,setStudentStreet] = useState('')
   const [schoolLocation, setSchoolLocation] = useState(null)
   const [distance, setDistance] = useState(null)
   const [carType,setCarType] = useState('')
@@ -30,7 +35,7 @@ const addData = () => {
   const [dateSelected, setDateSelected] = useState(false)
   const [showPicker,setShowPicker] = useState(false)
 
-  const {userData,fetchingUserDataLoading,schools,fetchingSchoolsLoading} = useStudentData()
+  const {userData,fetchingUserDataLoading,schools,fetchingSchoolsLoading,states,fetchingState} = useStudentData()
 
   const createAlert = (alerMessage) => {
     Alert.alert(alerMessage)
@@ -128,6 +133,34 @@ const showDatePicker = () => {
   setShowPicker(false);
 };
 
+//Handle the state change
+const handleStateChange = (state) => {
+  setStudentState(state);
+};
+
+// Fetch Cities based on selected Province (State)
+const fetchCities = (selectedState) => {
+  const schoolInfoCollectionRef = collection(DB, 'states')
+    const unsubscribe = onSnapshot(
+      schoolInfoCollectionRef,
+      async(querySnapshot) => {
+        const stateData = querySnapshot.docs
+          .map((doc) => ({
+            id: doc.id,
+            ...doc.data(),
+          }))
+          setCities(stateData.find((state) => state.name === selectedState).cities)
+        }
+    )
+    return () => unsubscribe();
+};
+
+// Handle the city change
+const handleCityChange = (city) => {
+  setStudentCity(city);
+}
+
+
 //Adding new student
   const addNewStudentHandler = async () => {
     if (!user) {
@@ -152,6 +185,10 @@ const showDatePicker = () => {
         student_phone_number:userData.phone_number,
         student_birth_date:studentBirthDate,
         student_sex:studentSex,
+        student_state:studentState,
+        student_city:studentCity,
+        student_street:studentStreet,
+        student_home_address:homeAdress,
         student_home_location:location,
         student_school:studentSchool,
         student_school_location:schoolLocation,
@@ -180,6 +217,10 @@ const showDatePicker = () => {
       setSchoolLocation(null)
       setDistance(null)
       setCarType('')
+      setStudentState('')
+      setStudentCity('')
+      setStudentStreet('')
+      setHomeAdress('')
 
     } catch (error) {
        createAlert('. يرجى المحاولة مرة أخرى')
@@ -199,9 +240,13 @@ const showDatePicker = () => {
     setSchoolLocation(null)
     setDistance(null)
     setCarType('')
+    setStudentState('')
+    setStudentCity('')
+    setStudentStreet('')
+    setHomeAdress('')
   }
 
-  if (addingNewStudentLoading || fetchingSchoolsLoading || fetchingUserDataLoading) {
+  if (addingNewStudentLoading || fetchingSchoolsLoading || fetchingUserDataLoading || fetchingState) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.spinner_error_container}>
@@ -214,7 +259,10 @@ const showDatePicker = () => {
   return(
     <SafeAreaView style={styles.container}>
       <Text style={styles.title}>اضافة طالب</Text>
-        <View style={styles.form}>
+        <ScrollView 
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.form} 
+        >
           <CustomeInput 
             placeholder={'الاسم الكامل'}
             value={studentFullName}
@@ -272,6 +320,44 @@ const showDatePicker = () => {
             handleSchoolChange(item.name)
              }}
           />
+          <Dropdown
+            style={styles.dropdown}
+            placeholderStyle={styles.dropdownStyle}
+            selectedTextStyle={styles.dropdownStyle}
+            data={states}
+            labelField="name"
+            valueField="name"
+            placeholder= 'المحافظة'
+            value={studentState}
+            onChange={item => {
+              handleStateChange(item.name)
+              fetchCities(item.name);
+             }}
+          />
+          <Dropdown
+            style={styles.dropdown}
+            placeholderStyle={styles.dropdownStyle}
+            selectedTextStyle={styles.dropdownStyle}
+            data={cities}
+            labelField="name"
+            valueField="name"
+            placeholder= 'الدائرة القضائية'
+            value={studentCity}
+            onChange={item => {
+            handleCityChange(item.name)
+             }}
+          />
+          <CustomeInput 
+            placeholder={'الحي'}
+            value={studentStreet}
+            onChangeText={(text) => setStudentStreet(text)}
+          />
+          <CustomeInput 
+            placeholder={'اقرب نقطة دالة'}
+            value={homeAdress}
+            onChangeText={(text) => setHomeAdress(text)}
+          />
+          <Text style={styles.address_warning_text}>مثلا قرب جامع الرحمة</Text>
           <CustomeButton
             title={location !== null ? 'تم تحديد موقعك' : 'عنوان المنزل'}
             icon={true}
@@ -289,14 +375,14 @@ const showDatePicker = () => {
           <CustomeButton 
             title={'أضف'}
             onPressHandler={addNewStudentHandler}
-             disabledStatus={!studentFullName || !studentSchool || !studentBirthDate || !studentSex || !carType}
+             disabledStatus={!studentFullName || !studentSchool || !studentBirthDate || !studentSex || !carType || !studentState || !studentCity || !homeAdress || !location || !distance}
           />
           <Text style={styles.location_warning_text}>* يرجى التأكد من ادخال جميع البيانات</Text>
           <CustomeButton 
             title={'الغاء'}
             onPressHandler={clearFormHandler}
           />
-        </View>          
+        </ScrollView>          
     </SafeAreaView>
   )
 }
@@ -311,12 +397,13 @@ const styles = StyleSheet.create({
     backgroundColor:colors.WHITE
   },
   title:{
-    marginVertical:20,
+    marginTop:20,
     fontFamily:'Cairo_400Regular',
     fontSize:24,
   },
   form:{
-    width:'100%',
+    marginTop:20,
+    paddingVertical:10,
     justifyContent:'space-between',
     alignItems:'center',
   },
@@ -367,6 +454,12 @@ const styles = StyleSheet.create({
     fontSize:11,
     textAlign:'center',
     marginBottom:10,
+  },
+  address_warning_text:{
+    fontFamily:'Cairo_700Bold',
+    fontSize:11,
+    textAlign:'center',
+    marginBottom:20,
   },
   map: {
     width: '95%',

@@ -1,18 +1,15 @@
-import React,{useState,useEffect} from 'react'
+import React,{useState} from 'react'
 import { Alert,StyleSheet, Text, View, TextInput,ActivityIndicator,TouchableOpacity } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import MapView, { Marker, Polyline, PROVIDER_DEFAULT } from 'react-native-maps'
-import axios from 'axios'
+import MapView, { Marker , PROVIDER_DEFAULT } from 'react-native-maps'
+import MapViewDirections from 'react-native-maps-directions'
 import { doc,updateDoc } from 'firebase/firestore'
 import { DB } from '../firebaseConfig'
 import { useStudentData } from '../app/stateManagment/StudentState'
 import colors from '../constants/Colors'
 
-const StudentHomePage = ({student,selectedStudent}) => {
+const StudentHomePage = ({student}) => {
 
-  const [driverLocation, setDriverLocation] = useState(null)
-  const [routeCoordinates, setRouteCoordinates] = useState([])
-  const [loadingRoutes,setLoadingRoutes] = useState(false)
   const [isCanceling, setIsCanceling] = useState(false);
   const [cancelText, setCancelText] = useState('');
 
@@ -23,109 +20,6 @@ const StudentHomePage = ({student,selectedStudent}) => {
   const {fetchingStudentsLoading,driver,fetchingdriverLoading} = useStudentData()
 
   const GOOGLE_MAPS_APIKEY = 'AIzaSyA-3LcUn0UzzVovibA1YZIL29n1c0GIi9M'
-
-  useEffect(() => {
-    if(
-      !student?.driver_id || 
-      !student?.picked_up || 
-      fetchingdriverLoading || 
-      fetchingStudentsLoading || 
-      student?.student_trip_status === 'at home' || 
-      student?.student_trip_status === 'at school'
-    ) {
-      return;
-    }
-
-    const trackDriver = async () => {
-      setLoadingRoutes(true)
-      try {
-        if (driver[student.driver_id]?.current_location) {
-          setDriverLocation(driver[student.driver_id]?.current_location);
-  
-          // Determine the destination based on the student's trip status
-          let destinationCoords;
-          if (student.student_trip_status === 'going to school') {
-            destinationCoords = student?.student_school_location;
-          } else if (student.student_trip_status === 'going to home') {
-            destinationCoords = student?.student_home_location?.coords;
-          }
-  
-          // Fetch route if there's a valid destination and driver location
-          if (destinationCoords && driver[student.driver_id]?.current_location) {
-          fetchRoute(driver[student.driver_id]?.current_location, destinationCoords);
-          }
-  
-        }
-      } catch (error) {
-        createAlert('حدث خطأ أثناء تحميل البيانات')
-        setLoadingRoutes(false)
-      }finally{
-        setLoadingRoutes(false)
-      }
-    }
-    trackDriver();
-  }, [
-      student?.driver_id,
-      student?.picked_up,
-      fetchingdriverLoading,
-      fetchingStudentsLoading,
-      student?.student_trip_status,
-      driver,
-      selectedStudent
-]);
-
-  // Function to get route between driver and student
-  const fetchRoute = async (startingPoint, nextDestinationCoords) => {
-    try {
-      const response = await axios.get(
-        `https://maps.googleapis.com/maps/api/directions/json?origin=${startingPoint.latitude},${startingPoint.longitude}&destination=${nextDestinationCoords.latitude},${nextDestinationCoords.longitude}&key=${GOOGLE_MAPS_APIKEY}`
-      );
-
-      if (response.data.routes.length) {
-        const points = decodePolyline(response.data.routes[0].overview_polyline.points);
-        setRouteCoordinates(points);
-      }
-    } catch (error) {
-      createAlert('حدث خطأ أثناء تحميل البيانات')
-    }
-  };
-
-  // Function to decode the polyline points from Google Directions API
-  const decodePolyline = (encoded) => {
-    let points = [];
-    let index = 0;
-    let len = encoded.length;
-    let lat = 0;
-    let lng = 0;
-
-    while (index < len) {
-      let b, shift = 0, result = 0;
-      do {
-        b = encoded.charCodeAt(index++) - 63;
-        result |= (b & 0x1f) << shift;
-        shift += 5;
-      } while (b >= 0x20);
-      let dlat = ((result & 1) ? ~(result >> 1) : (result >> 1));
-      lat += dlat;
-
-      shift = 0;
-      result = 0;
-      do {
-        b = encoded.charCodeAt(index++) - 63;
-        result |= (b & 0x1f) << shift;
-        shift += 5;
-      } while (b >= 0x20);
-      let dlng = ((result & 1) ? ~(result >> 1) : (result >> 1));
-      lng += dlng;
-
-      points.push({
-        latitude: lat / 1e5,
-        longitude: lng / 1e5
-      });
-    }
-
-    return points;
-  };
 
   // Function to handle canceling the trip
   const handleCancelTrip = async () => {
@@ -152,7 +46,7 @@ const StudentHomePage = ({student,selectedStudent}) => {
   }
 
 // Wait untill data load
-if (loadingRoutes) {
+if (fetchingdriverLoading || fetchingStudentsLoading) {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.spinner_error_container}>
@@ -162,6 +56,7 @@ if (loadingRoutes) {
   );
 }
 
+// If the student is not assigned to a driver
 if(!student.driver_id) {
   return(
     <SafeAreaView style={styles.container}>
@@ -175,6 +70,7 @@ if(!student.driver_id) {
   )
 }
 
+// If the student is at home
 if(student.driver_id && student.student_trip_status === 'at home') {
   return(
     <SafeAreaView style={styles.container}>
@@ -212,6 +108,7 @@ if(student.driver_id && student.student_trip_status === 'at home') {
   )
 }
 
+// If the student is at school
 if(student.driver_id && student.student_trip_status === 'at school') {
   return(
     <SafeAreaView style={styles.container}>
@@ -224,52 +121,91 @@ if(student.driver_id && student.student_trip_status === 'at school') {
   )
 }
 
-if(student.driver_id && (student.student_trip_status === 'going to school' || student.student_trip_status === 'going to home')) {
+// If the student is going to school
+if(student.driver_id && student.student_trip_status === 'going to school'){
   return(
     <SafeAreaView style={styles.container}>
       <View style={styles.student_route_status_container}>
         <View style={styles.student_route_status_box}>
-          <Text style={styles.student_route_status_text}>{student.student_trip_status === 'going to school' ? 'الطالب في الطريق الى المدرسة' : 'الطالب في الطريق الى المنزل'}</Text>
+          <Text style={styles.student_route_status_text}>الطالب في الطريق الى المدرسة</Text>
         </View>
       </View>
       <View style={styles.student_map_container}>
-      <MapView
-      provider={PROVIDER_DEFAULT}
-      initialRegion={{
-        latitude: driver[student.driver_id]?.current_location?.latitude || 0,
-        longitude: driver[student.driver_id]?.current_location?.longitude || 0,
-        latitudeDelta: 0.05,
-        longitudeDelta: 0.05,
-      }}
-      style={styles.map}
-      userInterfaceStyle="light"
-      showsUserLocation
-      >
+        <MapView
+          provider={PROVIDER_DEFAULT}
+          region={{
+            latitude: driver[student.driver_id]?.current_location?.latitude,
+            longitude: driver[student.driver_id]?.current_location?.longitude,
+            latitudeDelta: 0.005,
+            longitudeDelta: 0.005,
+          }}
+          showsUserLocation={true}
+          followsUserLocation={true}
+          style={styles.map}
+          userInterfaceStyle="light"
+        >
 
-      {student.student_school_location && student.student_trip_status === 'going to school' && (
-        <Marker
-          key={`مدرسة ${student?.id}`}
-          coordinate={student?.student_school_location}
-          title={'المدرسة'}
-        />
-      )}
+          <Marker
+           key={`مدرسة ${student?.id}`}
+           coordinate={student?.student_school_location}
+           title={'المدرسة'}
+          />
 
-      {student.student_home_location?.coords && student.student_trip_status === 'going to home' && (
-        <Marker
-          key={`منزل ${student?.id}`}
-          coordinate={student.student_home_location.coords}
-          title={'المنزل'}
-        />
-      )}
+          <MapViewDirections
+            origin={driver[student.driver_id]?.current_location}
+            destination={student?.student_school_location}
+            optimizeWaypoints={true}
+            apikey={GOOGLE_MAPS_APIKEY}
+            strokeWidth={4}
+            strokeColor="blue"
+            onError={(error) => console.log(error)}
+          />
 
-      {routeCoordinates.length > 0 && (
-        <Polyline
-          coordinates={routeCoordinates}
-          strokeColor="blue"
-          strokeWidth={4}
-        />
-      )}
+      </MapView>
+      </View>
+    </SafeAreaView>
+  )
+}
 
+// If the student is going to school or going to home
+if(student.driver_id && student.student_trip_status === 'going to home') {
+  return(
+    <SafeAreaView style={styles.container}>
+      <View style={styles.student_route_status_container}>
+        <View style={styles.student_route_status_box}>
+          <Text style={styles.student_route_status_text}> الطالب في الطريق الى المنزل</Text>
+        </View>
+      </View>
+      <View style={styles.student_map_container}>
+        <MapView
+          provider={PROVIDER_DEFAULT}
+          region={{
+            latitude: driver[student.driver_id]?.current_location?.latitude,
+            longitude: driver[student.driver_id]?.current_location?.longitude,
+            latitudeDelta: 0.005,
+            longitudeDelta: 0.005,
+          }}
+          showsUserLocation={true}
+          followsUserLocation={true}
+          style={styles.map}
+          userInterfaceStyle="light"
+        >
+
+          <Marker
+            key={`منزل ${student?.id}`}
+            coordinate={student.student_home_location.coords}
+            title={'المنزل'}
+          />
+
+          <MapViewDirections
+            origin={driver[student.driver_id]?.current_location}
+            destination={student?.student_home_location.coords}
+            optimizeWaypoints={true} // Optimize route for efficiency
+            apikey={GOOGLE_MAPS_APIKEY}
+            strokeWidth={4}
+            strokeColor="blue"
+           onError={(error) => console.log(error)}
+          />
       </MapView>
       </View>
     </SafeAreaView>
@@ -327,8 +263,7 @@ const styles = StyleSheet.create({
     color:colors.WHITE,
   },
   cancel_trip_btn:{
-    backgroundColor:'#FF4C51',
-    backgroundColor:'#16B1FF',
+    backgroundColor:colors.BLUE,
     width:250,
     padding:10,
     borderRadius:15,
@@ -412,7 +347,7 @@ const styles = StyleSheet.create({
     justifyContent:'center',
   },
   student_route_status_box:{
-    backgroundColor:colors.WHITE,
+    backgroundColor:colors.BLUE,
     width:250,
     padding:10,
     borderRadius:15,
@@ -423,6 +358,7 @@ const styles = StyleSheet.create({
     textAlign:'center',
     fontFamily: 'Cairo_400Regular',
     fontSize:15,
+    color:colors.WHITE,
   },
   map: {
     flex:1,

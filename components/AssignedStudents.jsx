@@ -28,12 +28,24 @@ const AssignedStudents = ({item}) => {
 
   return (
     <View style={styles.container}>
+
       <View style={styles.student_info_box}>
         <Text style={styles.student_info_text}>{item.student_full_name}</Text>
         <Text style={styles.student_info_text}>{item.student_family_name}</Text>
       </View>
-        <Text style={styles.student_info_text}>{userAge} سنة</Text>
-        <Text style={styles.student_info_text}>{item.student_school}</Text> 
+
+      <Text style={styles.student_info_text}>{userAge} سنة</Text>
+      <Text style={styles.student_info_text}>{item.student_school}</Text> 
+
+      <View style={styles.student_info_box}>
+        <Text style={styles.student_info_text}>{item.student_state}</Text> 
+        <Text style={styles.student_info_text}>/</Text> 
+        <Text style={styles.student_info_text}>{item.student_city}</Text>
+      </View>
+        <Text style={styles.student_info_text}>{item.student_street}</Text>
+        <Text style={styles.student_info_text}>{item.student_home_address}</Text>
+      
+
     </View>
   )
 }
