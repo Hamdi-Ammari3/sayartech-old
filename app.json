@@ -34,7 +34,7 @@
     "package": "com.hamdi_ammari.sayartech",
     "extra": {
       "eas": {
-        "projectId": "project ID"
+        "projectId": "dfc1d91d-a41f-4d2c-8ba0-040760f9bc89"
       }
     }
   },
@@ -55,7 +55,7 @@
   },
   "extra": {
     "eas": {
-      "projectId": "project ID"
+      "projectId": "dfc1d91d-a41f-4d2c-8ba0-040760f9bc89"
     }
   }
 }

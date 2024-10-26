@@ -1,7 +1,7 @@
-import { Alert,StyleSheet, Text, View, ActivityIndicator, TouchableOpacity,ScrollView, Linking } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useUser } from '@clerk/clerk-expo';
-import { useState,useEffect } from 'react';
+import { Alert,StyleSheet, Text, View, ActivityIndicator, TouchableOpacity,ScrollView, Linking } from 'react-native'
+import { SafeAreaView } from 'react-native-safe-area-context'
+import { useUser } from '@clerk/clerk-expo'
+import { useState,useEffect } from 'react'
 import * as Location from 'expo-location'
 import MapView, { Marker,PROVIDER_DEFAULT } from 'react-native-maps'
 import MapViewDirections from 'react-native-maps-directions'
@@ -24,7 +24,6 @@ const Home = () => {
   const [currentStudentIndex, setCurrentStudentIndex] = useState(0)
   const [displayFinalStation,setDisplayFinalStation] = useState(false)
   const [currentTrip, setCurrentTrip] = useState('first')
-  const [fetchingDriverCurrentLocationLoading,setFetchingDriverCurrentLocationLoading] = useState(true)
   const [isMarkingStudent, setIsMarkingStudent] = useState(false)
   const [checkingPickedUpStudents, setCheckingPickedUpStudents] = useState(false)
   const [checkingStudentId, setCheckingStudentId] = useState(null)
@@ -36,44 +35,42 @@ const Home = () => {
     Alert.alert(alerMessage)
   }
 
-// Fetch the driver curent location before start calculating
-useEffect(() => {
-  const fetchLocation = async () => {
-    // Request permission to access location
-    let { status } = await Location.requestForegroundPermissionsAsync();
-    if (status !== 'granted') {
-      createAlert('الرجاء تفعيل الصلاحيات للوصول الى الموقع')
-      return;
-    }    
-
-// Watch the driver's position and update Firestore every 50 meters
-  const locationSubscription = Location.watchPositionAsync(
-    {
-      accuracy: Location.Accuracy.High,
-      distanceInterval: 20, // Update location every 50 meters
-      timeInterval: 10000, // Update location every 10 seconds
-    },
-    (newLocation) => {
-      const { latitude, longitude } = newLocation.coords;   
-    // Update Firestore with the new location
-    if(fetchingDriverDataLoading === false) {
-      saveLocationToFirebase(latitude, longitude);
+  // Get the driver's current location
+  useEffect(() => {
+    if (fetchingDriverDataLoading === false && driverData[0]) {
+      const startTracking = async () => {
+        let { status } = await Location.requestForegroundPermissionsAsync();
+  
+        if (status !== 'granted') {
+          createAlert('الرجاء تفعيل الصلاحيات للوصول الى الموقع');
+          return;
+        }
+  
+        await Location.watchPositionAsync(
+          {
+            accuracy: Location.Accuracy.High,
+            distanceInterval: 2,
+            timeInterval: 10000,
+          },
+          (newLocation) => {
+            const { latitude, longitude } = newLocation.coords;
+            saveLocationToFirebase(latitude, longitude);
+          }
+        );
+      };
+  
+      startTracking();
     }
-    setFetchingDriverCurrentLocationLoading(false)
-  }
-);
-// Cleanup subscription when the component unmounts
-return () => {
-  locationSubscription && locationSubscription.remove();
-};
-};
-  fetchLocation();
-}, []);
-
+  }, [fetchingDriverDataLoading,driverData]);
+  
 //Save new location to firebase
   const saveLocationToFirebase = async (latitude, longitude) => {
+    if (!driverData[0]) {
+      return
+    }
+
   try {
-    const driverDoc = doc(DB, 'drivers', driverData[0].id);
+    const driverDoc = doc(DB, 'drivers', driverData[0]?.id);
     await updateDoc(driverDoc, {
       current_location: {
         latitude: latitude,
@@ -83,7 +80,7 @@ return () => {
   } catch (error) {
     Alert.alert('خطا اثناء تحديث الموقع');
   }
-  };
+}
 
 // sort students by distance
 useEffect(() => {
@@ -342,7 +339,6 @@ if( fetchingUserDataLoading ||
     fetchingDriverDataLoading  || 
     fetchingAssignedStudetns || 
     !isLoaded || 
-    fetchingDriverCurrentLocationLoading ||
     finishingTrip) {
   return (
     <SafeAreaView style={styles.container}>

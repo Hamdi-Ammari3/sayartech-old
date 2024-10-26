@@ -186,6 +186,7 @@ const uploadImage = async (uri) => {
       driver_family_name:userData.user_family_name,
       driver_user_id:userData.user_id,
       driver_phone_number:userData.phone_number,
+      current_location:{latitude:location.coords.latitude,longitude:location.coords.longitude},
       driver_home_location:location,
       driver_birth_date:driverBirthDate,
       driver_car_type:carType,
